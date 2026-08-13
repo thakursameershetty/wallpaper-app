@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { BottomNav } from "@/components/BottomNav";
 import { FolderProvider } from "@/context/FolderContext";
 import { ImageProvider } from "@/context/ImageContext";
 import { SearchProvider } from "@/context/SearchContext";
-import { SearchBar } from "@/components/SearchBar";
+import { NavigationLayout } from "@/components/NavigationLayout";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -31,21 +30,9 @@ export default function RootLayout({
         <FolderProvider>
           <ImageProvider>
             <SearchProvider>
-              {/* Header */}
-              <div className="sticky top-0 z-[100] w-full px-5 py-4 flex items-center justify-between gap-4 bg-[#f0f2f5]/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-black/5 dark:border-white/5">
-                <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain" />
-                <SearchBar />
-              </div>
-
-              <div className="flex-1 flex flex-col">
+              <NavigationLayout>
                 {children}
-              </div>
-              <div className="w-full flex items-center justify-center gap-3 pb-32 pt-4 opacity-80">
-                <span className="text-2xl font-bold dark:text-white">With</span>
-                <span className="heart text-[40px]">❤️</span>
-                <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain" />
-              </div>
-              <BottomNav />
+              </NavigationLayout>
             </SearchProvider>
           </ImageProvider>
         </FolderProvider>
