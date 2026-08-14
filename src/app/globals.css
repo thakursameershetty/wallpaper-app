@@ -124,13 +124,14 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
   }
 
   html {
-    @apply font-sans;
+    @apply font-sans overflow-x-hidden;
   }
 }
+
 .heart {
   display: inline-block;
   animation: beat 0.8s infinite alternate;
