@@ -1,104 +1,613 @@
 "use client";
 
-import { useState } from "react";
-import { useFolders } from "@/context/FolderContext";
-import { useImage } from "@/context/ImageContext";
-import { useSearch } from "@/context/SearchContext";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
+import dynamic from "next/dynamic";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Camera, Play, Mail, Code, X,
+  Volume2, VolumeX, Flame, Sparkles, Pencil, Tv,
+  ChevronLeft, ChevronRight, ExternalLink
+} from "lucide-react";
+import StickerPeel from "./components/StickerPeel";
+import SpotlightNavbar from "./components/SpotlightNavbar";
+import doodle1 from "./doodle-1.png";
 
-export default function Home() {
-  const { folders } = useFolders();
-  const { viewImage } = useImage();
-  const { searchQuery } = useSearch();
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+// Lazy load the AnimatedDock since it's at the very bottom of the page.
+const AnimatedDock = dynamic(() => import("./components/ui/animated-dock").then(mod => mod.AnimatedDock), {
+  ssr: false,
+  loading: () => <div className="h-16 w-full animate-pulse bg-surface/50 rounded-full" />
+});
 
-  // Get images based on active folder, or all if none selected
-  let displayedImages: string[] = [];
-  if (activeFolderId) {
-    const activeFolder = folders.find(f => f.id === activeFolderId);
-    if (activeFolder) {
-      displayedImages = activeFolder.images;
+// --- GALLERY DATA ---
+const INSTAGRAM_URL = "https://www.instagram.com/pencill.7";
+
+interface GalleryItem {
+  title: string;
+  number: string;
+  coverImage: string;
+  images: string[];
+}
+
+const GALLERY_DATA: GalleryItem[] = [
+  {
+    title: "Pencil Sketches",
+    number: "01",
+    coverImage: "/gallery-1.jpeg",
+    images: ["/gallery-1.jpeg",
+      "/pencilsketches/pencilsketches1.jpg",
+      "/pencilsketches/pencilsketches2.jpeg",
+      "/pencilsketches/pencilsketches3.webp",
+      "/pencilsketches/pencilsketches4.jpeg",
+      "/pencilsketches/pencilsketches5.jpeg",
+    ],
+  },
+  {
+    title: "Digital Arts",
+    number: "02",
+    coverImage: "/gallery-2.jpeg",
+    images: [
+      "/gallery-2.jpeg",
+      "/digitalarts/digitalarts5.jpeg",
+      "/digitalarts/digitalarts1.webp",
+      "/digitalarts/digitalarts2.webp",
+      "/digitalarts/digitalarts3.webp",
+      "/digitalarts/digitalarts4.jpg",
+    ],
+  },
+  {
+    title: "Charcoal Portraits",
+    number: "03",
+    coverImage: "/gallery-3.jpg",
+    images: ["/gallery-3.jpg"],
+  },
+  {
+    title: "Watercolors",
+    number: "04",
+    coverImage: "/gallery-5.jpeg",
+    images: ["/gallery-5.jpeg"],
+  },
+  {
+    title: "Pen Sketches",
+    number: "05",
+    coverImage: "/gallery-6.jpeg",
+    images: ["/gallery-6.jpeg"],
+  },
+  {
+    title: "Acrylic & Pen",
+    number: "06",
+    coverImage: "/gallery-4.jpeg",
+    images: ["/gallery-4.jpeg"],
+  },
+];
+
+export default function Profile() {
+  const smoothEase = [0.22, 1, 0.36, 1] as const;
+
+  // --- VIDEO STATE ---
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  // --- GALLERY MODAL STATE ---
+  const [selectedCard, setSelectedCard] = useState<GalleryItem | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState(0);
+
+  const closeModal = useCallback(() => {
+    setSelectedCard(null);
+    setCarouselIndex(0);
+    setSlideDirection(0);
+  }, []);
+
+  const openModal = useCallback((item: GalleryItem) => {
+    setSelectedCard(item);
+    setCarouselIndex(0);
+    setSlideDirection(0);
+  }, []);
+
+  const goToSlide = useCallback((index: number) => {
+    if (!selectedCard) return;
+    setSlideDirection(index > carouselIndex ? 1 : -1);
+    setCarouselIndex(index);
+  }, [selectedCard, carouselIndex]);
+
+  const nextSlide = useCallback(() => {
+    if (!selectedCard) return;
+    setSlideDirection(1);
+    setCarouselIndex((prev) => (prev + 1) % selectedCard.images.length);
+  }, [selectedCard]);
+
+  const prevSlide = useCallback(() => {
+    if (!selectedCard) return;
+    setSlideDirection(-1);
+    setCarouselIndex((prev) => (prev - 1 + selectedCard.images.length) % selectedCard.images.length);
+  }, [selectedCard]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+      if (e.key === "ArrowRight") nextSlide();
+      if (e.key === "ArrowLeft") prevSlide();
+    };
+    if (selectedCard) {
+      document.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
     }
-  } else {
-    // Extract all images from all folders into a single flat array
-    displayedImages = folders.flatMap(folder => folder.images);
-    // Deduplicate images just in case
-    displayedImages = Array.from(new Set(displayedImages));
-  }
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [selectedCard, closeModal, nextSlide, prevSlide]);
 
-  // Filter by search query
-  displayedImages = displayedImages.filter(src => src.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  const getTextColor = (hex: string) => {
-    if (!hex) return "rgb(255,255,255)";
-    hex = hex.replace(/^#/, "");
-    let r = 0, g = 0, b = 0;
-    if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else {
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
     }
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
-    return luminance > 140 ? "rgb(0,0,0)" : "rgb(255,255,255)";
+  };
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 1.2, ease: smoothEase } }
+  };
+
+  const stagger = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.12 } }
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen pt-6 px-5 pb-10">
-      {folders.length > 0 && (
-        <div className="w-full max-w-[1200px] mb-8 overflow-x-auto custom-scrollbar pb-2">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setActiveFolderId(null)}
-              className={cn(
-                "px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
-                activeFolderId === null
-                  ? "bg-[#111] dark:bg-white text-white dark:text-black shadow-md"
-                  : "bg-zinc-100 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-              )}
-            >
-              All
-            </button>
-            {folders.map(folder => (
-              <button
-                key={folder.id}
-                onClick={() => setActiveFolderId(folder.id)}
-                style={activeFolderId === folder.id ? { backgroundColor: folder.color, color: getTextColor(folder.color) } : {}}
-                className={cn(
-                  "px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
-                  activeFolderId === folder.id
-                    ? "shadow-md"
-                    : "bg-zinc-100 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                )}
-              >
-                {folder.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="portfolio-theme">
+      <main className="min-h-screen bg-transparent text-foreground font-sans selection:bg-foreground selection:text-background relative">
 
-      {displayedImages.length === 0 ? (
-        <p className="text-zinc-500 dark:text-zinc-400 mt-10 text-center max-w-sm">
-          No images found.
-        </p>
-      ) : (
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6 w-full max-w-[1200px]">
-          {displayedImages.map((src, index) => (
-            <div key={index} className="break-inside-avoid relative overflow-hidden rounded-2xl shadow-sm hover:shadow-md transition-shadow mb-6 cursor-pointer group" onClick={() => viewImage(src)}>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors z-10"></div>
-              <img
-                src={src}
-                alt={`Uploaded image ${index + 1}`}
-                className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+
+
+        {/* --- LIQUID GLASS NAVBAR --- */}
+        <SpotlightNavbar
+          items={[
+            { label: "Home", href: "#home" },
+            { label: "About", href: "#about" },
+            { label: "Showreel", href: "#showreel" },
+            { label: "Arsenal", href: "#gallery" },
+            { label: "Contact", href: "#contact" },
+          ]}
+        />
+
+        {/* --- HERO SECTION --- */}
+        <section id="home" className="min-h-screen flex flex-col justify-center px-6 md:px-12 max-w-7xl mx-auto relative pt-20">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/60 rounded-full blur-[100px] pointer-events-none -z-10" />
+
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-16 lg:gap-12 relative z-10 w-full">
+            <motion.div initial="hidden" animate="visible" variants={stagger} className="max-w-2xl lg:w-3/5">
+              <motion.p variants={fadeUp} className="text-muted font-medium tracking-[0.2em] uppercase text-xs mb-8 flex items-center gap-4">
+                <span className="w-12 h-[1px] bg-foreground/30"></span> Visual Artist
+              </motion.p>
+
+              <motion.h1 variants={fadeUp} className="text-7xl md:text-8xl lg:text-[10rem] font-serif tracking-tighter leading-[0.85] mb-8 relative inline-block text-foreground">
+                Abi<span className="italic pr-2">s</span>hek
+                <div className="absolute -top-4 -right-8 md:-top-6 md:-right-16 z-30 hidden sm:block">
+                  <StickerPeel
+                    imageSrc={doodle1.src}
+                    width={100}
+                    rotate={12}
+                    peelDirection={25}
+                    shadowIntensity={0.25}
+                    lightingIntensity={0.02}
+                    className="contrast-125 saturate-110"
+                  />
+                </div>
+              </motion.h1>
+
+              <motion.p variants={fadeUp} className="text-lg md:text-xl text-muted font-light leading-relaxed max-w-lg tracking-wide">
+                Specializing in pencil sketches, digital arts, 3D animations, and viral content creation. Blurring the line between physical and digital spaces.
+              </motion.p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)", y: 20 }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)", y: 0 }}
+              transition={{ duration: 1.4, delay: 0.2, ease: smoothEase }}
+              className="w-full max-w-sm md:max-w-md lg:w-2/5 aspect-[3/4] relative group mt-10 lg:mt-0 overflow-visible"
+            >
+              <div className="w-full h-full relative overflow-hidden rounded-2xl bg-surface shadow-xl border border-border/40">
+                <Image
+                  src="/abhishek-photo.png"
+                  alt="Abishek Portrait"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
+                  className="object-cover transition-all duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] scale-100 group-hover:scale-[1.03]"
+                  priority
+                />
+                <div className="absolute bottom-6 left-6 backdrop-blur-md bg-white/40 border border-white/40 text-xs font-medium tracking-widest uppercase px-5 py-2.5 rounded-xl text-foreground shadow-sm">
+                  Visakhapatnam
+                </div>
+              </div>
+
+              {/* Logo Sticker Peel for Smart Morph */}
+              <div className="absolute -top-10 -right-6 z-30">
+                <StickerPeel
+                  layoutId="app-logo"
+                  imageSrc="/logo.png"
+                  width={120}
+                  rotate={-10}
+                  peelDirection={10}
+                  shadowIntensity={0.25}
+                  lightingIntensity={0.05}
+                />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* --- ABOUT SECTION --- */}
+        <section id="about" className="py-32 px-6 md:px-12 max-w-6xl mx-auto relative z-10 border-t border-border/80 mt-12">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.h2 variants={fadeUp} className="text-muted font-medium tracking-[0.2em] uppercase text-xs mb-10 flex items-center gap-4">
+              <span className="w-12 h-[1px] bg-foreground/30"></span> The Story
+            </motion.h2>
+
+            <motion.div
+              variants={fadeUp}
+              className="relative overflow-hidden backdrop-blur-2xl bg-white/40 border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.04)] rounded-[2.5rem] p-8 md:p-12 lg:p-16"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-white/10 to-transparent opacity-80 pointer-events-none" />
+
+              <div className="relative z-10 text-xl md:text-3xl lg:text-[2.15rem] leading-[1.6] md:leading-[1.7] font-medium text-foreground/90 tracking-tight">
+                Hi, I’m <span className="font-serif italic text-foreground">Abishek</span>. I'm a final-year B.Tech student who is completely obsessed with
+
+                <span className="inline-flex flex-wrap gap-2 md:gap-3 mx-2 md:mx-3 items-center translate-y-2">
+                  <SkillTag>3D Animation</SkillTag>
+                  <SkillTag>Storyboarding</SkillTag>
+                  <SkillTag>Concept Art</SkillTag>
+                  <SkillTag>Cinematography</SkillTag>
+                  <SkillTag>Illustration</SkillTag>
+                  <SkillTag>Graphic Design</SkillTag>
+                  <SkillTag>Visual Storytelling</SkillTag>
+                </span>
+
+                <InlineBadge rotate={-8} bg="bg-amber-400" text="text-amber-950">
+                  <Sparkles fill="currentColor" size={24} className="md:w-7 md:h-7" />
+                </InlineBadge>
+                <br /><br />
+
+                <span className="text-muted/90 font-light">
+                  My creative journey started offline with charcoal portraits, pencil sketches, and watercolors
+
+                  <InlineBadge rotate={10} bg="bg-orange-500" text="text-white">
+                    <Pencil fill="currentColor" size={20} className="md:w-6 md:h-6" />
+                  </InlineBadge>
+
+                  Today, I use that traditional foundation to map out dynamic storyboard sketches, craft detailed concept art, paint digital illustrations, and build immersive 3D cinematic worlds
+
+                  <InlineBadge rotate={-5} bg="bg-indigo-500" text="text-white">
+                    <Tv fill="currentColor" size={22} className="md:w-6 md:h-6" />
+                  </InlineBadge>.
+                </span>
+                <br /><br />
+
+                <span className="text-muted/90 font-light">
+                  Whether I’m designing a bold startup brand identity, developing animated sequences, or editing high-energy content
+
+                  <InlineBadge rotate={12} bg="bg-rose-500" text="text-white">
+                    <Flame fill="currentColor" size={22} className="md:w-6 md:h-6" />
+                  </InlineBadge>
+
+                  I treat every project like a scene in a movie. I already work professionally as a graphic designer and editor, proving that you don't need to wait for graduation to start making a visual impact.
+                </span>
+
+                {/* The Toolkit Footnote */}
+                <div className="mt-12 pt-8 border-t border-border/60">
+                  <p className="text-base md:text-lg font-mono text-muted leading-relaxed">
+                    <strong className="text-foreground font-serif italic text-xl mr-3 font-medium">My Toolkit:</strong>
+                    Blender 3D, Unreal Engine, Maya, After Effects, Premiere Pro, Photoshop, Illustrator, and Adobe Animate
+                  </p>
+                </div>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* --- CINEMATIC SHOWREEL SECTION --- */}
+        <section id="showreel" className="py-32 px-6 md:px-12 max-w-7xl mx-auto relative z-10 border-t border-border/80">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <div className="flex flex-col md:flex-row gap-8 justify-between items-end mb-12">
+              <motion.h2 variants={fadeUp} className="text-4xl md:text-6xl font-bold uppercase tracking-tight">
+                Dimensions in Motion
+              </motion.h2>
+              <motion.p variants={fadeUp} className="text-gray-400 max-w-sm text-base md:text-lg leading-relaxed font-light pb-2">
+                From static sketches to fully rendered worlds. Hit play to watch a collection of my 3D animated videos and visual storytelling.
+              </motion.p>
             </div>
-          ))}
-        </div>
-      )}
+
+            <motion.div
+              variants={fadeUp}
+              className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden border border-border/80 shadow-[0_20px_60px_rgba(0,0,0,0.1)] bg-surface cursor-pointer group"
+              onClick={toggleMute}
+            >
+              <video
+                ref={videoRef}
+                src="/showreel.mp4"
+                autoPlay
+                loop
+                muted={isMuted}
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] scale-100 group-hover:scale-[1.02]"
+              />
+
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] flex items-center justify-center">
+                <div className={`w-20 h-20 rounded-full backdrop-blur-xl bg-black/40 border border-white/20 flex items-center justify-center text-white transition-all duration-500 ease-out shadow-2xl ${isMuted ? 'scale-100 opacity-100' : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'}`}>
+                  {isMuted ? <VolumeX size={32} /> : <Volume2 size={32} />}
+                </div>
+              </div>
+
+              <div className="absolute bottom-8 left-8 backdrop-blur-md bg-black/40 border border-white/10 text-xs font-medium tracking-widest uppercase px-6 py-3 rounded-xl text-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-[800ms]">
+                {isMuted ? "Click to Unmute" : "Playing with Audio"}
+              </div>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* --- SELECTED WORKS / MEDIUMS --- */}
+        <section id="gallery" className="py-32 px-6 md:px-12 max-w-7xl mx-auto border-t border-border/80 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1.2, ease: smoothEase }}
+            className="flex flex-col md:flex-row gap-8 justify-between items-end mb-20"
+          >
+            <h2 className="text-4xl md:text-6xl font-serif tracking-tighter">Creative Arsenal</h2>
+            <p className="text-muted max-w-sm text-base md:text-lg leading-relaxed font-light pb-2">
+              A comprehensive toolkit designed to bring complex ideas into clear, engaging visual realities.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12"
+          >
+            {GALLERY_DATA.map((item) => (
+              <GalleryCard
+                key={item.number}
+                title={item.title}
+                number={item.number}
+                imageSrc={item.coverImage}
+                onClick={() => openModal(item)}
+              />
+            ))}
+          </motion.div>
+        </section>
+
+        {/* --- CONTACT SECTION --- */}
+        <section id="contact" className="py-32 px-6 md:px-12 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1.2, ease: smoothEase }}
+            className="max-w-7xl mx-auto flex flex-col items-center text-center"
+          >
+            <div className="mb-6">
+              <Flame size={48} className="text-foreground/20" strokeWidth={1} />
+            </div>
+            <h2 className="text-4xl md:text-6xl font-serif tracking-tighter mb-4">Get in Touch</h2>
+            <p className="text-muted text-base md:text-lg font-light mb-12 max-w-md leading-relaxed">
+              Open for commissions, collaborations, and creative projects.
+            </p>
+            <AnimatedDock
+              items={[
+                { link: "https://www.instagram.com/pencill.7", target: "_blank", Icon: <Camera size={20} /> },
+                { link: "https://www.youtube.com/@pencill7", target: "_blank", Icon: <Play size={20} /> },
+                { link: "mailto:challaabi12@gmail.com", Icon: <Mail size={20} /> },
+              ]}
+            />
+          </motion.div>
+        </section>
+
+        {/* --- CAROUSEL GALLERY MODAL --- */}
+        <AnimatePresence>
+          {selectedCard && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+              onClick={closeModal}
+            >
+              {/* Darker Backdrop */}
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+
+              {/* Modal Content */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="relative w-full max-w-5xl max-h-[90vh] rounded-[2rem] overflow-hidden bg-surface shadow-[0_20px_60px_rgba(0,0,0,0.3)] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Close Button */}
+                <button
+                  onClick={closeModal}
+                  className="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-background/50 backdrop-blur-md border border-border flex items-center justify-center text-foreground hover:bg-background transition-all duration-300 shadow-sm hover:scale-105"
+                >
+                  <X size={24} />
+                </button>
+
+                {/* Carousel Image Area */}
+                <div className="relative w-full flex-1 min-h-[50vh] md:min-h-[60vh] bg-foreground/5 overflow-hidden">
+                  <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
+                    <motion.div
+                      key={carouselIndex}
+                      custom={slideDirection}
+                      variants={{
+                        enter: (dir: number) => ({ x: dir >= 0 ? "100%" : "-100%", opacity: 0 }),
+                        center: { x: 0, opacity: 1 },
+                        exit: (dir: number) => ({ x: dir >= 0 ? "-100%" : "100%", opacity: 0 }),
+                      }}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className="absolute inset-0 flex items-center justify-center p-4"
+                    >
+                      <Image
+                        src={selectedCard.images[carouselIndex]}
+                        alt={`${selectedCard.title} - ${carouselIndex + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 1200px"
+                        className="object-contain p-2 md:p-8"
+                        priority
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Navigation Arrows — only show if more than 1 image */}
+                  {selectedCard.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevSlide}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-background/60 backdrop-blur-md border border-border/60 flex items-center justify-center text-foreground hover:bg-background hover:scale-110 transition-all duration-300 shadow-lg"
+                      >
+                        <ChevronLeft size={22} />
+                      </button>
+                      <button
+                        onClick={nextSlide}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-background/60 backdrop-blur-md border border-border/60 flex items-center justify-center text-foreground hover:bg-background hover:scale-110 transition-all duration-300 shadow-lg"
+                      >
+                        <ChevronRight size={22} />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Image Counter */}
+                  {selectedCard.images.length > 1 && (
+                    <div className="absolute top-6 left-6 z-20 px-4 py-2 rounded-full bg-background/60 backdrop-blur-md border border-border/60 text-xs font-mono tracking-widest text-foreground/80">
+                      {carouselIndex + 1} / {selectedCard.images.length}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dot Indicators */}
+                {selectedCard.images.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 py-4 bg-surface">
+                    {selectedCard.images.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => goToSlide(idx)}
+                        className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === carouselIndex
+                          ? "bg-foreground scale-110"
+                          : "bg-foreground/20 hover:bg-foreground/40"
+                          }`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Info Bar + View More */}
+                <div className="flex items-center justify-between p-6 md:px-10 md:py-8 bg-background border-t border-border/60 shrink-0">
+                  <div>
+                    <h3 className="text-2xl md:text-4xl font-serif tracking-tight">{selectedCard.title}</h3>
+                    <p className="text-muted text-sm md:text-base font-mono uppercase tracking-widest mt-2">Medium — {selectedCard.number}</p>
+                  </div>
+                  <a
+                    href={INSTAGRAM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium tracking-wide hover:scale-105 hover:shadow-lg transition-all duration-300"
+                  >
+                    View More <ExternalLink size={16} />
+                  </a>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* --- FOOTER --- */}
+        <footer className="py-16 px-6 md:px-12 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-xs text-muted font-medium uppercase tracking-[0.2em] relative z-10 border-t border-border/80">
+          <span>© {new Date().getFullYear()} Pencil7</span>
+          <span className="mt-4 md:mt-0 hover:text-foreground transition-colors cursor-pointer duration-500">Visakhapatnam, IN</span>
+        </footer>
+
+      </main>
     </div>
+  );
+}
+
+// --- HELPER COMPONENTS ---
+
+function SkillTag({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.span
+      whileHover={{ scale: 1.05, y: -2 }}
+      whileTap={{ scale: 0.95 }}
+      className="inline-block px-4 py-1.5 md:px-5 md:py-2 bg-foreground/5 backdrop-blur-md border border-foreground/10 text-foreground font-mono text-xs md:text-sm uppercase tracking-wider rounded-full cursor-pointer hover:bg-foreground hover:text-background transition-colors duration-300 shadow-sm"
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+function InlineBadge({ children, rotate, bg, text }: { children: React.ReactNode, rotate: number, bg: string, text: string }) {
+  return (
+    <motion.span
+      whileHover={{ scale: 1.15, rotate: 0 }}
+      className={`inline-flex items-center justify-center align-middle mx-3 md:mx-4 w-10 h-10 md:w-14 md:h-14 rounded-full shadow-lg ${bg} ${text} transform transition-all duration-500 cursor-default ring-1 ring-white/30 hover:shadow-2xl`}
+      style={{ transform: `rotate(${rotate}deg)` }}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+function GalleryCard({ title, number, imageSrc, onClick }: { title: string, number: string, imageSrc: string, onClick?: () => void }) {
+  const smoothEase = [0.22, 1, 0.36, 1] as const;
+
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 30 },
+        visible: { opacity: 1, y: 0, transition: { duration: 1.2, ease: smoothEase } }
+      }}
+      className="group cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="aspect-[4/5] bg-background mb-6 relative overflow-hidden rounded-xl border border-border/80 shadow-sm transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:-translate-y-2">
+        <Image
+          src={imageSrc}
+          alt={title}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] scale-100 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] z-0" />
+        <div className="absolute inset-0 flex items-center justify-center text-white font-sans text-xs uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] z-10">
+          View Work
+        </div>
+      </div>
+      <div className="flex justify-between items-start border-b border-border/80 pb-4 transition-colors duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:border-foreground/30">
+        <h3 className="text-xl font-serif tracking-tight group-hover:italic transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1">{title}</h3>
+        <span className="text-xs font-sans text-muted tracking-widest transition-colors duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:text-foreground">{number}</span>
+      </div>
+    </motion.div>
   );
 }

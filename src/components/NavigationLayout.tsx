@@ -10,16 +10,19 @@ export function NavigationLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPencilPage = pathname === "/pencil";
 
+  const isRootPage = pathname === "/";
+  const hideTopNav = isPencilPage || isRootPage;
+
   return (
     <>
-      {!isPencilPage && (
+      {!hideTopNav && (
         <div className="sticky top-0 z-[100] w-full px-5 py-4 flex items-center justify-between gap-4 bg-[#f0f2f5]/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-black/5 dark:border-white/5">
           <Link href="/pencil">
-            <motion.img 
-              layoutId="app-logo" 
-              src="/logo.png" 
-              alt="Logo" 
-              className="h-10 w-auto object-contain cursor-pointer" 
+            <motion.img
+              layoutId="app-logo"
+              src="/logo.png"
+              alt="Logo"
+              className="h-10 w-auto object-contain cursor-pointer"
             />
           </Link>
           <SearchBar />
