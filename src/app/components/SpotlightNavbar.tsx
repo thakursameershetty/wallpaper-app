@@ -127,7 +127,7 @@ export default function SpotlightNavbar({
                 className={cn(
                     /* LIQUID GLASS EFFECT CLASSES */
                     "backdrop-blur-xl bg-white/40 border border-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)]",
-                    "relative h-12 rounded-full transition-all duration-300 overflow-hidden"
+                    "relative h-10 md:h-12 rounded-full transition-all duration-300 overflow-hidden"
                 )}
                 // Injecting the light colors directly via style to avoid <style jsx>
                 style={{
@@ -135,7 +135,7 @@ export default function SpotlightNavbar({
                     "--ambience-color": "rgba(0,0,0,0.6)",
                 } as React.CSSProperties}
             >
-                <ul className="relative flex items-center h-full px-2 gap-1 z-[10]">
+                <ul className="relative flex items-center h-full px-1 md:px-2 gap-0 md:gap-1 z-[10]">
                     {items.map((item, idx) => (
                         <li key={idx} className="relative h-full flex items-center justify-center">
                             <a
@@ -146,7 +146,7 @@ export default function SpotlightNavbar({
                                     handleItemClick(item, idx);
                                 }}
                                 className={cn(
-                                    "px-5 py-1.5 text-sm font-medium transition-colors duration-300 rounded-full",
+                                    "px-2 md:px-5 py-1.5 text-[11px] md:text-sm font-medium transition-colors duration-300 rounded-full",
                                     activeIndex === idx
                                         ? "text-black"
                                         : "text-neutral-500 hover:text-black"
