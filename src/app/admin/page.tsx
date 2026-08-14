@@ -29,7 +29,17 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function SortableFolderWrapper({ folder, onClick }: { folder: Folder, onClick: () => void }) {
+function SortableFolderWrapper({
+  folder,
+  onClick,
+  isSelectMode,
+  isSelected
+}: {
+  folder: Folder;
+  onClick: () => void;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+}) {
   const {
     attributes,
     listeners,
@@ -43,7 +53,7 @@ function SortableFolderWrapper({ folder, onClick }: { folder: Folder, onClick: (
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 100 : 1,
-    opacity: isDragging ? 0.8 : 1,
+    opacity: isDragging ? (isSelectMode && isSelected ? 0.9 : 0.5) : 1,
   };
 
   return (
@@ -52,15 +62,24 @@ function SortableFolderWrapper({ folder, onClick }: { folder: Folder, onClick: (
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
-      className={`relative group ${isDragging ? 'opacity-50 scale-105 z-50 shadow-2xl' : ''}`}
+      onClick={(e) => {
+        onClick();
+      }}
+      className={`relative group ${isDragging ? 'scale-105 z-50 shadow-2xl' : ''}`}
     >
-      <FolderCard folder={folder} className="w-[360px]" />
+      <div className={`relative transition-all rounded-3xl ${isSelected ? 'ring-4 ring-blue-500 scale-95' : 'ring-0 hover:scale-[1.02]'}`}>
+        <FolderCard folder={folder} className="w-[360px]" />
+        {isSelectMode && (
+          <div className={`absolute top-4 left-4 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors shadow-lg z-10 ${isSelected ? 'bg-blue-500 border-blue-500' : 'bg-black/30 border-white backdrop-blur-md'}`}>
+            {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-white stroke-[3]"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function SortableImage({ src, onDelete }: { src: string, onDelete: () => void }) {
+function SortableImage({ src, onDelete, isSelectMode, isSelected, onToggleSelect }: { src: string, onDelete: () => void, isSelectMode?: boolean, isSelected?: boolean, onToggleSelect?: () => void }) {
   const { viewImage } = useImage();
   const {
     attributes,
@@ -89,23 +108,34 @@ function SortableImage({ src, onDelete }: { src: string, onDelete: () => void })
         className="w-full h-full relative"
         onClick={(e) => {
           e.stopPropagation();
-          viewImage(src);
+          if (isSelectMode && onToggleSelect) {
+            onToggleSelect();
+          } else {
+            viewImage(src);
+          }
         }}
       >
-        <img src={src} alt="image" className="w-full h-full rounded-xl object-cover shadow-sm border border-black/5 dark:border-white/10 cursor-pointer hover:opacity-90 transition-opacity" />
+        <img src={src} alt="image" className={`w-full h-full rounded-xl object-cover shadow-sm transition-all ${isSelected ? 'border-blue-500 border-4 scale-95' : 'border border-black/5 dark:border-white/10 hover:opacity-90 cursor-pointer'}`} />
+        {isSelectMode && (
+          <div className={`absolute top-2 left-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'bg-black/20 border-white backdrop-blur-md'}`}>
+            {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4 text-white stroke-[3]"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+          </div>
+        )}
       </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-md cursor-pointer"
-        title="Delete Image"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3.5 h-3.5">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
+      {!isSelectMode && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-md cursor-pointer"
+          title="Delete Image"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3.5 h-3.5">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -312,6 +342,28 @@ export default function AdminPage() {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
 
+  // Folder Select Mode State
+  const [isFolderSelectMode, setIsFolderSelectMode] = useState(false);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
+
+  const toggleFolderSelection = (folderId: string) => {
+    setSelectedFolderIds(prev =>
+      prev.includes(folderId) ? prev.filter(id => id !== folderId) : [...prev, folderId]
+    );
+  };
+
+  // Select Mode State
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+
+  const handleCloseEditModal = () => {
+    setSelectedFolder(null);
+    setIsSelectMode(false);
+    setSelectedImages([]);
+    setIsMoveModalOpen(false);
+  };
+
   useEffect(() => {
     const t = setTimeout(() => setIsMounted(true), 0);
     return () => clearTimeout(t);
@@ -428,14 +480,20 @@ export default function AdminPage() {
       if (!fileName) return;
 
       const { error: storageError } = await supabase.storage.from('wallpaper-images').remove([fileName]);
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.warn("Storage deletion failed:", storageError);
+      }
 
       const folder = folders.find(f => f.id === folderId);
       if (!folder) return;
       const updatedImages = folder.images.filter(img => img !== imageUrl);
 
-      const { error: dbError } = await supabase.from('folders').update({ images: updatedImages }).eq('id', folderId);
+      const { data, error: dbError } = await supabase.from('folders').update({ images: updatedImages }).eq('id', folderId).select();
       if (dbError) throw dbError;
+
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked by Supabase RLS. Please add an UPDATE policy for the 'folders' table.");
+      }
 
       updateFolder(folderId, { ...folder, images: updatedImages });
       setSelectedFolder(prev => prev ? { ...prev, images: updatedImages } : null);
@@ -526,17 +584,84 @@ export default function AdminPage() {
 
       const fileNames = folder.images.map(url => url.split('/').pop()).filter(Boolean) as string[];
       if (fileNames.length > 0) {
-        await supabase.storage.from('wallpaper-images').remove(fileNames);
+        const { error: storageError } = await supabase.storage.from('wallpaper-images').remove(fileNames);
+        if (storageError) {
+          console.warn("Storage deletion failed:", storageError);
+          // We can proceed even if storage delete fails (e.g. file missing)
+        }
       }
 
-      const { error: dbError } = await supabase.from('folders').delete().eq('id', folderId);
+      // Add .select() to ensure the row is actually returned (proves it was deleted)
+      const { data, error: dbError } = await supabase.from('folders').delete().eq('id', folderId).select();
+
       if (dbError) throw dbError;
 
+      // If data is null or empty, it means RLS prevented the deletion
+      if (!data || data.length === 0) {
+        throw new Error("Deletion blocked by Supabase RLS. Please add a DELETE policy for the 'folders' table in your Supabase dashboard.");
+      }
+
       removeFolder(folderId);
-      setSelectedFolder(null);
+      handleCloseEditModal();
     } catch (error: unknown) {
       console.error(error);
       alert("Failed to delete folder: " + (error as Error).message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedImages.length === 0 || !selectedFolder) return;
+    if (!confirm(`Are you sure you want to delete ${selectedImages.length} images?`)) return;
+    try {
+      const fileNames = selectedImages.map(url => url.split('/').pop()).filter(Boolean) as string[];
+      if (fileNames.length > 0) {
+        const { error: storageError } = await supabase.storage.from('wallpaper-images').remove(fileNames);
+        if (storageError) console.warn("Storage deletion failed:", storageError);
+      }
+
+      const updatedImages = selectedFolder.images.filter(img => !selectedImages.includes(img));
+      const { data, error: dbError } = await supabase.from('folders').update({ images: updatedImages }).eq('id', selectedFolder.id).select();
+      if (dbError) throw dbError;
+      if (!data || data.length === 0) throw new Error("Update blocked by Supabase RLS. Please add an UPDATE policy for the 'folders' table.");
+
+      updateFolder(selectedFolder.id, { ...selectedFolder, images: updatedImages });
+      setSelectedFolder({ ...selectedFolder, images: updatedImages });
+      setSelectedImages([]);
+      setIsSelectMode(false);
+    } catch (error: unknown) {
+      console.error(error);
+      alert("Failed to delete images: " + (error as Error).message);
+    }
+  };
+
+  const handleBulkMove = async (targetFolderId: string) => {
+    if (selectedImages.length === 0 || !selectedFolder) return;
+    try {
+      const targetFolder = folders.find(f => f.id === targetFolderId);
+      if (!targetFolder) return;
+
+      const newSourceImages = selectedFolder.images.filter(img => !selectedImages.includes(img));
+      const newTargetImages = [...targetFolder.images, ...selectedImages];
+
+      // Update source folder
+      const { error: sourceError } = await supabase.from('folders').update({ images: newSourceImages }).eq('id', selectedFolder.id);
+      if (sourceError) throw sourceError;
+
+      // Update target folder
+      const { error: targetError } = await supabase.from('folders').update({ images: newTargetImages }).eq('id', targetFolderId);
+      if (targetError) throw targetError;
+
+      // Update local state
+      updateFolder(selectedFolder.id, { ...selectedFolder, images: newSourceImages });
+      updateFolder(targetFolderId, { ...targetFolder, images: newTargetImages });
+
+      setSelectedFolder({ ...selectedFolder, images: newSourceImages });
+      setSelectedImages([]);
+      setIsSelectMode(false);
+      setIsMoveModalOpen(false);
+    } catch (error: unknown) {
+      console.error(error);
+      alert("Failed to move images: " + (error as Error).message);
     }
   };
 
@@ -545,6 +670,36 @@ export default function AdminPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  const handleBulkFolderDelete = async () => {
+    if (selectedFolderIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedFolderIds.length} collections? This action cannot be undone.`)) return;
+
+    try {
+      const foldersToDelete = folders.filter(f => selectedFolderIds.includes(f.id));
+
+      let allFileNames: string[] = [];
+      foldersToDelete.forEach(f => {
+        const fileNames = f.images.map(url => url.split('/').pop()).filter(Boolean) as string[];
+        allFileNames = [...allFileNames, ...fileNames];
+      });
+
+      if (allFileNames.length > 0) {
+        const { error: storageError } = await supabase.storage.from('wallpaper-images').remove(allFileNames);
+        if (storageError) console.warn("Storage deletion failed:", storageError);
+      }
+
+      const { error: dbError } = await supabase.from('folders').delete().in('id', selectedFolderIds);
+      if (dbError) throw dbError;
+
+      selectedFolderIds.forEach(id => removeFolder(id));
+      setSelectedFolderIds([]);
+      setIsFolderSelectMode(false);
+    } catch (error: unknown) {
+      console.error(error);
+      alert("Failed to delete collections: " + (error as Error).message);
+    }
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveFolderId(event.active.id as string);
@@ -555,21 +710,44 @@ export default function AdminPage() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = folders.findIndex(f => f.id === active.id);
-      const newIndex = folders.findIndex(f => f.id === over.id);
+      const isDraggingSelected = selectedFolderIds.includes(active.id as string);
+      const itemsToMove = isDraggingSelected && selectedFolderIds.length > 0
+        ? selectedFolderIds
+        : [active.id as string];
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        reorderFolders(arrayMove(folders, oldIndex, newIndex));
+      const sortedItemsToMove = [...itemsToMove].sort((a, b) =>
+        folders.findIndex(f => f.id === a) - folders.findIndex(f => f.id === b)
+      );
 
-        const updatedFolders = arrayMove(folders, oldIndex, newIndex);
-        try {
-          const promises = updatedFolders.map((folder, idx) =>
-            supabase.from('folders').update({ sort_order: idx * 10 }).eq('id', folder.id)
-          );
-          await Promise.all(promises);
-        } catch (error) {
-          console.error("Failed to save new order to database:", error);
-        }
+      const overIndex = folders.findIndex(f => f.id === over.id);
+      const activeIndex = folders.findIndex(f => f.id === active.id);
+
+      if (isDraggingSelected && selectedFolderIds.includes(over.id as string)) {
+        return;
+      }
+
+      const filteredFolders = folders.filter(f => !sortedItemsToMove.includes(f.id));
+      let insertIndex = filteredFolders.findIndex(f => f.id === over.id);
+
+      if (activeIndex < overIndex) {
+        insertIndex += 1;
+      }
+
+      const newFolders = [
+        ...filteredFolders.slice(0, insertIndex),
+        ...sortedItemsToMove.map(id => folders.find(f => f.id === id)!),
+        ...filteredFolders.slice(insertIndex)
+      ];
+
+      reorderFolders(newFolders);
+
+      try {
+        const promises = newFolders.map((folder, idx) =>
+          supabase.from('folders').update({ sort_order: idx * 10 }).eq('id', folder.id)
+        );
+        await Promise.all(promises);
+      } catch (error) {
+        console.error("Failed to save new order to database:", error);
       }
     }
   };
@@ -650,18 +828,85 @@ export default function AdminPage() {
             strategy={rectSortingStrategy}
           >
             {folders.map(folder => (
-              <SortableFolderWrapper key={folder.id} folder={folder} onClick={() => setSelectedFolder(folder)} />
+              <SortableFolderWrapper
+                key={folder.id}
+                folder={folder}
+                isSelectMode={isFolderSelectMode}
+                isSelected={selectedFolderIds.includes(folder.id)}
+                onClick={() => {
+                  if (isFolderSelectMode) {
+                    toggleFolderSelection(folder.id);
+                  } else {
+                    setSelectedFolder(folder);
+                  }
+                }}
+              />
             ))}
           </SortableContext>
         </div>
         <DragOverlay adjustScale={false} dropAnimation={null}>
           {activeFolderId ? (
-            <div className="scale-105 shadow-2xl z-[9999] opacity-90 cursor-grabbing">
+            <div className={`shadow-2xl z-[9999] opacity-90 cursor-grabbing ${selectedFolderIds.includes(activeFolderId) && selectedFolderIds.length > 1 ? 'ring-4 ring-blue-500 scale-95 rounded-3xl' : 'scale-105'}`}>
               <FolderCard folder={folders.find(f => f.id === activeFolderId)!} className="w-[360px]" />
+              {selectedFolderIds.includes(activeFolderId) && selectedFolderIds.length > 1 && (
+                <div className="absolute -top-3 -right-3 bg-blue-500 text-white font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+                  {selectedFolderIds.length}
+                </div>
+              )}
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Floating Action Bar for Folder Selection */}
+      <AnimatePresence>
+        {isFolderSelectMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.2)] border border-black/5 dark:border-white/10"
+          >
+            <div className="flex items-center gap-3 pr-4 border-r border-zinc-200 dark:border-zinc-700">
+              <button onClick={() => { setIsFolderSelectMode(false); setSelectedFolderIds([]); }} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-zinc-600 dark:text-zinc-300">
+                  <line x1="18" y1="6" x2="6" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
+                  <line x1="6" y1="6" x2="18" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
+                </svg>
+              </button>
+              <span className="font-bold text-[15px] text-[#111] dark:text-white px-1">
+                {selectedFolderIds.length}
+              </span>
+            </div>
+
+            <button
+              onClick={handleBulkFolderDelete}
+              disabled={selectedFolderIds.length === 0}
+              className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-sm rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Select Collections Button */}
+      <AnimatePresence>
+        {!isFolderSelectMode && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            onClick={() => setIsFolderSelectMode(true)}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-[#007AFF]/85 backdrop-blur-md text-white font-semibold text-[15px] px-6 py-3 rounded-full shadow-[0_8px_30px_rgba(0,122,255,0.25)] hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,122,255,0.35)] transition-all flex items-center justify-center"
+          >
+            Select Collections
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Modal */}
       {isModalOpen && (
@@ -761,7 +1006,7 @@ export default function AdminPage() {
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-300"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedFolder(null);
+            if (e.target === e.currentTarget && !isMoveModalOpen) handleCloseEditModal();
           }}
         >
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-[24px] w-full max-w-[500px] shadow-[0_24px_48px_rgba(0,0,0,0.2)] animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col">
@@ -784,12 +1029,21 @@ export default function AdminPage() {
                   className="text-[22px] text-[#111] dark:text-white font-bold tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 rounded-md px-1 w-full"
                 />
               </div>
-              <button onClick={() => setSelectedFolder(null)} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-zinc-600 dark:text-zinc-300">
-                  <line x1="18" y1="6" x2="6" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
-                  <line x1="6" y1="6" x2="18" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDeleteFolder(selectedFolder.id)}
+                  title="Delete Collection"
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors shrink-0"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+                <button onClick={handleCloseEditModal} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-zinc-600 dark:text-zinc-300">
+                    <line x1="18" y1="6" x2="6" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
+                    <line x1="6" y1="6" x2="18" y2="18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 min-h-[300px]">
@@ -825,7 +1079,18 @@ export default function AdminPage() {
                   />
                   <SortableContext items={selectedFolder.images} strategy={rectSortingStrategy}>
                     {selectedFolder.images.map((src) => (
-                      <SortableImage key={src} src={src} onDelete={() => handleDeleteImage(selectedFolder.id, src)} />
+                      <SortableImage
+                        key={src}
+                        src={src}
+                        onDelete={() => handleDeleteImage(selectedFolder.id, src)}
+                        isSelectMode={isSelectMode}
+                        isSelected={selectedImages.includes(src)}
+                        onToggleSelect={() => {
+                          setSelectedImages(prev =>
+                            prev.includes(src) ? prev.filter(img => img !== src) : [...prev, src]
+                          )
+                        }}
+                      />
                     ))}
                   </SortableContext>
                 </div>
@@ -837,22 +1102,69 @@ export default function AdminPage() {
               )}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-              <button
-                onClick={() => handleDeleteFolder(selectedFolder.id)}
-                className="px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors flex items-center gap-2"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Delete Collection
-              </button>
-              <button
-                onClick={handleSaveChanges}
-                className="px-6 py-2.5 rounded-xl bg-[#111] dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity"
-              >
-                Done
-              </button>
+            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center relative">
+              {!isSelectMode ? (
+                <>
+                  <button
+                    onClick={() => setIsSelectMode(true)}
+                    className="px-6 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    Select
+                  </button>
+                  <button
+                    onClick={handleSaveChanges}
+                    className="px-6 py-2.5 rounded-xl bg-[#111] dark:bg-white text-white dark:text-black font-semibold text-sm hover:opacity-90 transition-opacity"
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setIsSelectMode(false); setSelectedImages([]); setIsMoveModalOpen(false); }}
+                    className="px-6 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsMoveModalOpen(!isMoveModalOpen)}
+                      disabled={selectedImages.length === 0}
+                      className="px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold text-sm hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                    >
+                      Move ({selectedImages.length})
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={selectedImages.length === 0}
+                      className="px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                    >
+                      Delete ({selectedImages.length})
+                    </button>
+                  </div>
+                  {/* Move Modal */}
+                  {isMoveModalOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-2 z-[101]">
+                      <div className="text-xs font-semibold text-zinc-500 mb-2 px-2 pt-1">Move to...</div>
+                      <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                        {folders.filter(f => f.id !== selectedFolder.id).map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => handleBulkMove(f.id)}
+                            className="w-full text-left px-3 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: f.color }}></div>
+                            {f.name}
+                          </button>
+                        ))}
+                        {folders.filter(f => f.id !== selectedFolder.id).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-zinc-500">No other collections available.</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
