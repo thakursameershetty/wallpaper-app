@@ -49,10 +49,13 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center min-h-screen pt-6 px-5 pb-10">
       {folders.length > 0 && (
-        <div className="w-full max-w-[1200px] mb-8 overflow-x-auto custom-scrollbar pb-2">
+        <div className="sticky top-[89px] z-40 bg-[#f0f2f5]/80 dark:bg-zinc-950/80 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-full shadow-sm w-full max-w-[1200px] mb-8 overflow-x-auto custom-scrollbar p-2">
           <div className="flex gap-3">
             <button
-              onClick={() => setActiveFolderId(null)}
+              onClick={() => {
+                setActiveFolderId(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className={cn(
                 "px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
                 activeFolderId === null
@@ -65,7 +68,10 @@ export default function Home() {
             {folders.map(folder => (
               <button
                 key={folder.id}
-                onClick={() => setActiveFolderId(folder.id)}
+                onClick={() => {
+                  setActiveFolderId(folder.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 style={activeFolderId === folder.id ? { backgroundColor: folder.color, color: getTextColor(folder.color) } : {}}
                 className={cn(
                   "px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
