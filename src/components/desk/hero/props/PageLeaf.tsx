@@ -54,12 +54,21 @@ export function shadeMaterial(shade: PageShade) {
 const NS = 40;
 const NZ = 12;
 
-// the root swings toward where the scroll says the page should be, a touch underdamped
-const ROOT_K = 70;
-const ROOT_C = 2 * Math.sqrt(ROOT_K) * 0.85;
+// the root swings toward where the scroll says the page should be. A page has weight: it takes up the
+// scroll unhurriedly (a soft spring, close to critically damped, so it hardly overshoots) and can only
+// swing so fast, however hard the scroll yanks at it.
+const ROOT_K = 44;
+const ROOT_C = 2 * Math.sqrt(ROOT_K) * 0.97;
+/** The fastest a page can swing (rad/s): a full turn takes at least this long (π ÷ it). */
+const MAX_SWING = 8;
+/** Pages stacked on one another keep this much room (rad) between them while they turn. */
+const STACK_GAP = 0.1;
+const STRIP_GAP = 0.025;
 // the free edge is springy paper: it trails while the leaf moves, then sways past and settles
 const BEND_K = 38;
 const BEND_C = 2 * Math.sqrt(BEND_K) * 0.2;
+/** How much extra damping the free edge gets once the leaf is lying on the page (× its usual). */
+const LAND_DAMP = 5;
 /** Air on the page's face: radians of trail per rad/s of swing. */
 const DRAG = 0.055;
 /** How much the root's acceleration throws the edge the other way. */
@@ -82,6 +91,13 @@ type Props = {
   front: React.ReactNode;
   back: React.ReactNode;
   shade: { left: PageShade; right: PageShade };
+  /**
+   * The leaf lying on top of this one (if any), as it is right now: the root angle, how far its free
+   * end trails, and its twist. This leaf may never turn further than that one, or pass through it.
+   */
+  above?: () => { a: number; b: number; tw: number };
+  /** Told, every frame, how this leaf is (so the one under it can keep clear). */
+  onState?: (a: number, b: number, tw: number) => void;
 };
 
 /**
@@ -89,12 +105,14 @@ type Props = {
  * not keyframed: the root follows `turn` on a spring, and the sheet bends behind it under drag,
  * inertia and gravity, so it trails through the turn, flops over and settles with a little sway.
  */
-export function TurningLeaf({ width, depth, turn, open, front, back, shade }: Props) {
+export function TurningLeaf({ width, depth, turn, open, front, back, shade, above, onState }: Props) {
   const invalidate = useThree((s) => s.invalidate);
   const group = useRef<THREE.Group>(null);
   const frontMesh = useRef<THREE.Mesh>(null);
   const backMesh = useRef<THREE.Mesh>(null);
   const sim = useRef<{ a: number; av: number; b: number; bv: number } | null>(null);
+  // what the sheet was last laid out for: a leaf lying still is not laid out again
+  const laid = useRef({ a: NaN, b: NaN, o: NaN, upA: NaN, upB: NaN });
 
   const { frontGeo, backGeo } = useMemo(() => {
     const count = (NS + 1) * (NZ + 1);
@@ -140,7 +158,9 @@ export function TurningLeaf({ width, depth, turn, open, front, back, shade }: Pr
     if (g) g.visible = o > 0; // while the book is shut it is part of the block
     if (!g || !fm || !bm || o <= 0) return;
 
-    const target = Math.PI * THREE.MathUtils.clamp(turn.current ?? 0, 0, 1);
+    const up = above?.();
+    // it may not turn further than the leaf on top of it (less a little room), whatever the scroll asks
+    const target = Math.min(Math.PI * THREE.MathUtils.clamp(turn.current ?? 0, 0, 1), up ? Math.max(0, up.a - STACK_GAP) : Math.PI);
     const s = (sim.current ??= { a: target, av: 0, b: 0, bv: 0 });
 
     // 1. step the springs (a few small steps: stable however long the frame was)
@@ -148,7 +168,13 @@ export function TurningLeaf({ width, depth, turn, open, front, back, shade }: Pr
     for (let k = 0; k < STEPS; k++) {
       const av0 = s.av;
       s.av += (ROOT_K * (target - s.a) - ROOT_C * s.av) * dt;
+      s.av = THREE.MathUtils.clamp(s.av, -MAX_SWING, MAX_SWING);
       s.a += s.av * dt;
+      // …and it is held back from running into the leaf above it, should that one still be on its way
+      if (up && s.a > up.a - STACK_GAP * 0.5) {
+        s.a = Math.max(0, up.a - STACK_GAP * 0.5);
+        s.av = Math.min(s.av, 0);
+      }
       // it lands on the page under it and stops dead there; the edge carries on and flops
       if (s.a < 0 || s.a > Math.PI) {
         s.a = THREE.MathUtils.clamp(s.a, 0, Math.PI);
@@ -156,12 +182,26 @@ export function TurningLeaf({ width, depth, turn, open, front, back, shade }: Pr
       }
       const rootAcc = (s.av - av0) / dt;
       const sag = -GRAVITY * Math.sin(s.a) * Math.cos(s.a) - DRAG * s.av;
-      s.bv += (BEND_K * (sag - s.b) - BEND_C * s.bv - INERTIA * rootAcc) * dt;
+      // once it has come down on the page its edge is let to settle fast, rather than sway on for a while
+      const down = THREE.MathUtils.smoothstep(s.a, 2.6, Math.PI);
+      s.bv += (BEND_K * (sag - s.b) - BEND_C * (1 + LAND_DAMP * down) * s.bv - INERTIA * rootAcc) * dt;
       s.b = THREE.MathUtils.clamp(s.b + s.bv * dt, -1.4, 1.4);
     }
     const moving =
       Math.abs(target - s.a) > AT_REST || Math.abs(s.av) > AT_REST || Math.abs(s.b) > AT_REST || Math.abs(s.bv) > AT_REST;
     if (moving) invalidate();
+    onState?.(s.a, s.b, TWIST * Math.tanh(s.av / 4));
+
+    // a leaf lying still, under a leaf lying still, is already laid out: do nothing (the whole book can be
+    // open at once, and re-laying-out seven sheets each frame is the costliest thing the page does)
+    const L = laid.current;
+    const key = Math.abs(L.a - s.a) + Math.abs(L.b - s.b) + Math.abs(L.o - o) + Math.abs(L.upA - (up?.a ?? 0)) + Math.abs(L.upB - (up?.b ?? 0));
+    if (!moving && key < 1e-6) return;
+    L.a = s.a;
+    L.b = s.b;
+    L.o = o;
+    L.upA = up?.a ?? 0;
+    L.upB = up?.b ?? 0;
 
     // 2. lay the sheet out: march out from the spine, each strip turned a little more (or less)
     const rest = THREE.MathUtils.smoothstep(o, 0.6, 1) * Math.cos(s.a) ** 2; // bowed only while lying down
@@ -178,7 +218,10 @@ export function TurningLeaf({ width, depth, turn, open, front, back, shade }: Pr
       for (let i = 0; i < NS; i++) {
         const m = (i + 0.5) / NS;
         // never through the pages it lies on, either side
-        const th = THREE.MathUtils.clamp(s.a + s.b * m ** 1.5 + twist * zn * m, 0, Math.PI);
+        let th = s.a + s.b * m ** 1.5 + twist * zn * m;
+        // and strip by strip, never through the leaf on top of it, however either one flexes
+        if (up) th = Math.min(th, up.a + up.b * m ** 1.5 + up.tw * zn * m - STRIP_GAP);
+        th = THREE.MathUtils.clamp(th, 0, Math.PI);
         x += Math.cos(th) * ds;
         y += Math.sin(th) * ds;
         p.set([x, y + gutterLift((i + 1) / NS) * rest, z], (j * (NS + 1) + i + 1) * 3);
