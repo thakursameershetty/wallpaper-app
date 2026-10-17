@@ -1,10 +1,10 @@
 import type { AboutContent } from "@/context/AboutContext";
-import { cssFont, grain, rng } from "./canvas";
+import { cssFont, grain } from "./canvas";
 import type { CanvasTexture } from "three";
 import { TOOLS } from "../../tools";
 
 /**
- * The open sketchbook's two pages, drawn onto canvases: warm sketchbook paper with the
+ * The open sketchbook's two pages, drawn onto canvases: ruled notebook paper with the
  * gutter shadow baked in, the yellow Pencil illustration pasted onto the left page and the
  * "Meet Pencil" copy printed on the right.
  */
@@ -22,47 +22,30 @@ const fonts = () => ({
   marker: cssFont("--font-permanent-marker", "cursive"),
 });
 
-/** Sketchbook paper: warm off-white with tooth and fibres, shading into the gutter at `spine`. */
+/** Ruled notebook paper: clean off-white with faint tooth, shading into the gutter at `spine`. */
 function paper(ctx: CanvasRenderingContext2D, w: number, h: number, spine: "left" | "right", seed: number) {
-  ctx.fillStyle = "#f6f0e2";
+  ctx.fillStyle = "#fbf8f1";
   ctx.fillRect(0, 0, w, h);
-  const r = rng(seed);
-  // soft mottling
-  for (let i = 0; i < 40; i++) {
-    const x = r() * w;
-    const y = r() * h;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, 80 + r() * 260);
-    g.addColorStop(0, r() < 0.5 ? "rgba(214,196,160,0.10)" : "rgba(255,252,244,0.12)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  }
-  // fibres
-  for (let i = 0; i < 1400; i++) {
-    const x = r() * w;
-    const y = r() * h;
-    const a = r() * Math.PI;
-    const len = 3 + r() * 12;
-    ctx.strokeStyle = r() < 0.6 ? "rgba(150,128,96,0.10)" : "rgba(255,255,250,0.35)";
-    ctx.lineWidth = 0.6 + r() * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
-    ctx.stroke();
-  }
-  grain(ctx, w, h, 14, seed + 1);
+  grain(ctx, w, h, 5, seed + 1);
+
+  // feint ruling, 8 mm apart, under a plain header band; red margin on the outer edge
+  const rule = h * 0.042;
+  ctx.fillStyle = "rgba(96,140,196,0.42)";
+  for (let y = h * 0.085; y < h * 0.97; y += rule) ctx.fillRect(0, Math.round(y), w, 2);
+  ctx.fillStyle = "rgba(206,86,86,0.5)";
+  ctx.fillRect(spine === "left" ? w * 0.955 : w * 0.045 - 2, 0, 2, h);
 
   // the page curves down into the gutter: darker toward the spine, a little at the outer edge
   const gx = spine === "left" ? 0 : w;
   const dir = spine === "left" ? 1 : -1;
   const gutter = ctx.createLinearGradient(gx, 0, gx + dir * w * 0.22, 0);
-  gutter.addColorStop(0, "rgba(92,70,40,0.38)");
-  gutter.addColorStop(0.12, "rgba(92,70,40,0.12)");
+  gutter.addColorStop(0, "rgba(92,70,40,0.26)");
+  gutter.addColorStop(0.12, "rgba(92,70,40,0.07)");
   gutter.addColorStop(1, "rgba(92,70,40,0)");
   ctx.fillStyle = gutter;
   ctx.fillRect(0, 0, w, h);
   const outer = ctx.createLinearGradient(w - gx, 0, w - gx - dir * w * 0.05, 0);
-  outer.addColorStop(0, "rgba(120,96,60,0.12)");
+  outer.addColorStop(0, "rgba(120,96,60,0.05)");
   outer.addColorStop(1, "rgba(120,96,60,0)");
   ctx.fillStyle = outer;
   ctx.fillRect(0, 0, w, h);

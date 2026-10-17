@@ -2,7 +2,7 @@
 
 import { use, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { RoundedBox, useTexture } from "@react-three/drei";
+import { RoundedBox } from "@react-three/drei";
 import { cachedTexture, cssFont, fontsReady, rng, useDispose } from "./canvas";
 import { SCALE, useStationery, type Part } from "./Objects";
 
@@ -189,10 +189,6 @@ const KB = { w: 2.6, d: 1.85, t: 0.06 };
 const PAD = { w: 2.48, h: 1.78, t: 0.06, lean: 26 };
 
 export function Tablet() {
-  // one of his paintings open on the iPad, mid-session
-  const art = useTexture("/desk/wall/digitalarts1.webp", (t) => {
-    t.colorSpace = THREE.SRGBColorSpace;
-  });
   const keys = useMemo(
     () =>
       cachedTexture("ipad-keys", 1040, 740, (ctx, w, h) => {
@@ -233,11 +229,9 @@ export function Tablet() {
         </RoundedBox>
         <mesh position={[0, PAD.h / 2, PAD.t / 2 + 0.001]}>
           <planeGeometry args={[PAD.w - 0.04, PAD.h - 0.04]} />
+          {/* screen off: just black glass catching the room */}
           <meshPhysicalMaterial
-            color="#000000"
-            emissive="#ffffff"
-            emissiveMap={art}
-            emissiveIntensity={0.75}
+            color="#08090b"
             roughness={0.06}
             clearcoat={1}
             clearcoatRoughness={0.03}

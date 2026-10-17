@@ -4,18 +4,31 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { READY_EVENT, flight } from "./flight";
+import { LoadingScreen } from "./LoadingScreen";
 import { ArrowDown, Play } from "lucide-react";
 
 const DeskScene = dynamic(() => import("./DeskScene"), { ssr: false });
+
+/** If the desk never gets ready (no WebGL, a failed download), let people into the site anyway. */
+const LOADER_TIMEOUT_MS = 25_000;
 
 export function HeroDesk() {
   const sectionRef = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(true);
   const [ready, setReady] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [gaveUp, setGaveUp] = useState(false);
+  // the loader can report lower numbers when new files join the queue; never run the bar backwards
+  const handleProgress = useCallback((p: number) => setProgress((prev) => Math.max(prev, p)), []);
   const handleReady = useCallback(() => {
     setReady(true);
     flight.ready = true;
     window.dispatchEvent(new Event(READY_EVENT));
+  }, []);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setGaveUp(true), LOADER_TIMEOUT_MS);
+    return () => clearTimeout(id);
   }, []);
 
   // Stop rendering the desk once it has scrolled away
@@ -33,10 +46,11 @@ export function HeroDesk() {
       ref={sectionRef}
       className="relative h-[100svh] min-h-[560px] overflow-hidden bg-[radial-gradient(120%_90%_at_50%_30%,#e6e0d4_0%,#3a3430_80%)]"
     >
+      <LoadingScreen progress={progress} done={ready || gaveUp} />
       <h1 className="sr-only">Abishek — Created to Create</h1>
 
       <div className={`absolute inset-0 transition-opacity duration-1000 ${ready ? "opacity-100" : "opacity-0"}`}>
-        <DeskScene running={inView} eventSource={sectionRef} onReady={handleReady} />
+        <DeskScene running={inView} eventSource={sectionRef} onReady={handleReady} onProgress={handleProgress} />
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-6 md:px-10 md:pb-10">

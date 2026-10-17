@@ -97,7 +97,15 @@ const WALL_ART = [
   "digitalarts1", "digitalarts2", "digitalarts3", "digitalarts4", "digitalarts5",
 ] as const;
 type Art = (typeof WALL_ART)[number];
-type Poster = "mismatched" | "hinanna" | "f1" | "quote" | "switchboard" | "cat" | "pencilHoodie" | "pencilPose";
+type Sketch = "pencilHoodie" | "pencilPose" | "pencilShades";
+type Poster = "mismatched" | "hinanna" | "f1" | "quote" | "switchboard" | "cat" | "swatches" | "notes" | Sketch;
+const SKETCH_SRC: Record<Sketch, string> = {
+  pencilHoodie: "/desk/pencil-hoodie.webp",
+  pencilPose: "/desk/pencil-pose.webp",
+  pencilShades: "/desk/pencil-shades.webp",
+};
+const SKETCHES = Object.keys(SKETCH_SRC) as Sketch[];
+const isSketch = (p?: Poster): p is Sketch => !!p && p in SKETCH_SRC;
 
 /** One sheet taped to the wall: centre (wall units, y up from the desk), width, and what's on it. */
 type Sheet = { x: number; y: number; w: number; h?: number; art?: Art; poster?: Poster };
@@ -134,17 +142,45 @@ const SHEETS: Sheet[] = [
   { x: 3.25, y: 8.4, w: 1.8, h: 2.1, poster: "quote" },
 ];
 
-const ART_W = DESK.w;
+/**
+ * The collage carries on past the ends of the desk, so the wall is covered edge to edge however
+ * wide the screen. Same three columns a side, same four rows, with his work hung a second time.
+ */
+const SIDE_COLS = [7.5, 9.65, 11.8];
+const SIDE_ROWS = [1.25, 3.75, 6.2, 8.6];
+const sideSheets = (sign: 1 | -1, grid: (Partial<Sheet> & Pick<Sheet, "w">)[][]): Sheet[] =>
+  grid.flatMap((row, r) =>
+    row.map((s, c) => ({ x: sign * SIDE_COLS[c] + ((r + c) % 2 ? 0.08 : -0.06), y: SIDE_ROWS[r] + ((r * 3 + c) % 3) * 0.1 - 0.1, ...s })),
+  );
+
+const LEFT_SHEETS = sideSheets(-1, [
+  [{ w: 2.0, art: "gallery-5" }, { w: 1.75, h: 1.75, poster: "notes" }, { w: 2.0, art: "digitalarts2" }],
+  [{ w: 2.0, art: "pencilsketches5" }, { w: 2.1, art: "digitalarts4" }, { w: 1.9, art: "pencilsketches1" }],
+  [{ w: 1.6, art: "gallery-3" }, { w: 1.9, h: 2.4, poster: "pencilShades" }, { w: 2.05, art: "gallery-1" }],
+  [{ w: 2.0, art: "digitalarts1" }, { w: 1.9, art: "pencilsketches4" }, { w: 2.0, art: "gallery-6" }],
+]);
+
+const RIGHT_SHEETS = sideSheets(1, [
+  [{ w: 2.0, art: "pencilsketches4" }, { w: 2.0, art: "gallery-1" }, { w: 2.05, art: "digitalarts3" }],
+  [{ w: 2.05, art: "digitalarts1" }, { w: 2.0, art: "gallery-6" }, { w: 2.0, art: "pencilsketches2" }],
+  [{ w: 1.6, h: 2.1, poster: "swatches" }, { w: 2.0, art: "gallery-3" }, { w: 2.1, art: "gallery-4" }],
+  [{ w: 2.0, art: "digitalarts5" }, { w: 1.9, art: "pencilsketches3" }, { w: 2.0, art: "gallery-2" }],
+]);
+
+/** Three panels, each its own texture (one wide one would pass what phones can hold): [left edge, width, sheets]. */
+const ART_W = 13;
+const SIDE_W = 6.9;
+const PANELS: { key: string; x0: number; w: number; sheets: Sheet[]; seed: number }[] = [
+  { key: "art-wall-left", x0: -ART_W / 2 - SIDE_W, w: SIDE_W, sheets: LEFT_SHEETS, seed: 78 },
+  { key: "art-wall", x0: -ART_W / 2, w: ART_W, sheets: SHEETS, seed: 77 },
+  { key: "art-wall-right", x0: ART_W / 2, w: SIDE_W, sheets: RIGHT_SHEETS, seed: 79 },
+];
 const ART_H = 10;
 const PX = 240; // texture pixels per wall unit
 
 export function ArtWall() {
   use(fontsReady());
-  const textures = useTexture([
-    ...WALL_ART.map((a) => `/desk/wall/${a}.webp`),
-    "/desk/pencil-hoodie.webp",
-    "/desk/pencil-pose.webp",
-  ]);
+  const textures = useTexture([...WALL_ART.map((a) => `/desk/wall/${a}.webp`), ...SKETCHES.map((k) => SKETCH_SRC[k])]);
 
   const plaster = useMemo(
     () =>
@@ -153,80 +189,80 @@ export function ArtWall() {
         512,
         512,
         (ctx, w, h) => {
-          ctx.fillStyle = "#e6e0d4";
+          // freshly painted: a flat warm white with only the faintest texture
+          ctx.fillStyle = "#e9e4da";
           ctx.fillRect(0, 0, w, h);
-          const r = rng(31);
-          for (let i = 0; i < 30; i++) {
-            const g = ctx.createRadialGradient(r() * w, r() * h, 0, r() * w, r() * h, 40 + r() * 120);
-            g.addColorStop(0, r() < 0.5 ? "rgba(150,135,110,0.06)" : "rgba(255,255,250,0.07)");
-            g.addColorStop(1, "rgba(0,0,0,0)");
-            ctx.fillStyle = g;
-            ctx.fillRect(0, 0, w, h);
-          }
-          grain(ctx, w, h, 12, 32);
+          grain(ctx, w, h, 4, 32);
         },
         { repeat: [8, 6] },
       ),
     [],
   );
 
-  const collage = useMemo(() => {
+  const panels = useMemo(() => {
     const images = Object.fromEntries(WALL_ART.map((a, i) => [a, textures[i].image as HTMLImageElement])) as Record<
       Art,
       HTMLImageElement
     >;
-    const hoodie = textures[WALL_ART.length].image as HTMLImageElement;
-    const pose = textures[WALL_ART.length + 1].image as HTMLImageElement;
+    const sketches = Object.fromEntries(
+      SKETCHES.map((k, i) => [k, textures[WALL_ART.length + i].image as HTMLImageElement]),
+    ) as Record<Sketch, HTMLImageElement>;
 
-    return cachedTexture("art-wall", ART_W * PX, ART_H * PX, (ctx) => {
-      const r = rng(77);
-      for (const s of SHEETS) {
-        const img = s.art ? images[s.art] : null;
-        const w = s.w * PX;
-        const h = (s.h ?? (img ? s.w * (img.height / img.width) : s.w * 1.41)) * PX;
-        ctx.save();
-        ctx.translate((s.x + ART_W / 2) * PX, (ART_H - s.y) * PX);
-        ctx.rotate((r() - 0.5) * 0.045);
+    return PANELS.map((p) => ({
+      ...p,
+      map: cachedTexture(p.key, Math.round(p.w * PX), ART_H * PX, (ctx) => {
+        const r = rng(p.seed);
+        for (const s of p.sheets) {
+          const img = s.art ? images[s.art] : null;
+          const w = s.w * PX;
+          const h = (s.h ?? (img ? s.w * (img.height / img.width) : s.w * 1.41)) * PX;
+          ctx.save();
+          ctx.translate((s.x - p.x0) * PX, (ART_H - s.y) * PX);
+          ctx.rotate((r() - 0.5) * 0.045);
 
-        // paper, lifting off the wall a touch
-        ctx.shadowColor = "rgba(50,38,26,0.32)";
-        ctx.shadowBlur = 18;
-        ctx.shadowOffsetX = -4;
-        ctx.shadowOffsetY = 8;
-        ctx.fillStyle = s.poster === "mismatched" ? "#f2cf2f" : "#f5f3ee";
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.shadowColor = "transparent";
+          // paper, lifting off the wall a touch
+          ctx.shadowColor = "rgba(50,38,26,0.32)";
+          ctx.shadowBlur = 18;
+          ctx.shadowOffsetX = -4;
+          ctx.shadowOffsetY = 8;
+          ctx.fillStyle = s.poster === "mismatched" ? "#f2cf2f" : s.poster === "notes" ? "rgba(0,0,0,0)" : "#f5f3ee";
+          ctx.fillRect(-w / 2, -h / 2, w, h);
+          ctx.shadowColor = "transparent";
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(-w / 2, -h / 2, w, h);
-        ctx.clip();
-        if (img) {
-          // the drawing sits in the paper: multiply keeps its white as paper white
-          ctx.globalCompositeOperation = "multiply";
-          const inset = w * 0.025;
-          ctx.drawImage(img, -w / 2 + inset, -h / 2 + inset, w - 2 * inset, h - 2 * inset);
-        } else if (s.poster === "pencilHoodie" || s.poster === "pencilPose") {
-          const src = s.poster === "pencilHoodie" ? hoodie : pose;
-          const sh = h * 0.86;
-          const sw = sh * (src.width / src.height);
-          ctx.globalCompositeOperation = "multiply";
-          ctx.drawImage(pencilSketch(src, Math.round(sw), Math.round(sh)), -sw / 2, -sh / 2, sw, sh);
-        } else if (s.poster) {
-          drawPoster(ctx, s.poster, w, h);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-w / 2, -h / 2, w, h);
+          ctx.clip();
+          if (img) {
+            // the drawing sits in the paper: multiply keeps its white as paper white
+            ctx.globalCompositeOperation = "multiply";
+            const inset = w * 0.025;
+            ctx.drawImage(img, -w / 2 + inset, -h / 2 + inset, w - 2 * inset, h - 2 * inset);
+          } else if (isSketch(s.poster)) {
+            const src = sketches[s.poster];
+            const sh = h * 0.86;
+            const sw = Math.min(sh * (src.width / src.height), w * 0.92);
+            const fit = sw / (src.width / src.height);
+            ctx.globalCompositeOperation = "multiply";
+            ctx.drawImage(pencilSketch(src, Math.round(sw), Math.round(fit)), -sw / 2, -fit / 2, sw, fit);
+          } else if (s.poster) {
+            drawPoster(ctx, s.poster, w, h);
+          }
+          ctx.restore();
+
+          // a soft curl of shade along the edges
+          if (s.poster !== "notes") {
+            ctx.globalCompositeOperation = "multiply";
+            const edge = ctx.createRadialGradient(0, 0, Math.min(w, h) * 0.45, 0, 0, Math.max(w, h) * 0.75);
+            edge.addColorStop(0, "rgba(255,255,255,0)");
+            edge.addColorStop(1, "rgba(200,188,170,0.6)");
+            ctx.fillStyle = edge;
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+          }
+          ctx.restore();
         }
-        ctx.restore();
-
-        // a little handling grime along the edges
-        ctx.globalCompositeOperation = "multiply";
-        const edge = ctx.createRadialGradient(0, 0, Math.min(w, h) * 0.45, 0, 0, Math.max(w, h) * 0.75);
-        edge.addColorStop(0, "rgba(255,255,255,0)");
-        edge.addColorStop(1, "rgba(200,188,170,0.6)");
-        ctx.fillStyle = edge;
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.restore();
-      }
-    });
+      }),
+    }));
   }, [textures]);
 
   return (
@@ -235,15 +271,12 @@ export function ArtWall() {
         <planeGeometry args={[40, 24]} />
         <meshStandardMaterial map={plaster} roughness={0.95} />
       </mesh>
-      <mesh position={[0, ART_H / 2, 0.012]} receiveShadow>
-        <planeGeometry args={[ART_W, ART_H]} />
-        <meshStandardMaterial map={collage} transparent depthWrite={false} roughness={0.9} />
-      </mesh>
-      {/* the dark grey alcove wall on the left */}
-      <mesh position={[-DESK.w / 2 - 0.25, 4, 5]} rotation-y={Math.PI / 2} receiveShadow>
-        <planeGeometry args={[10, 24]} />
-        <meshStandardMaterial color="#3f4245" roughness={0.9} />
-      </mesh>
+      {panels.map((p) => (
+        <mesh key={p.key} position={[p.x0 + p.w / 2, ART_H / 2, 0.012]} receiveShadow>
+          <planeGeometry args={[p.w, ART_H]} />
+          <meshStandardMaterial map={p.map} transparent depthWrite={false} roughness={0.9} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -365,6 +398,47 @@ function drawPoster(ctx: CanvasRenderingContext2D, poster: Poster, w: number, h:
           ctx.fillStyle = "rgba(255,255,255,0.6)";
           ctx.fillRect(x - sw / 2 + 4, y - sh / 2 + 4, sw - 8, sh * 0.35);
         }
+      }
+      break;
+    }
+    case "swatches": {
+      // a paint-swatch card: his go-to palette, each chip labelled in pencil
+      const chips = ["#d4a24c", "#b5664b", "#8a9682", "#6f7f95", "#2f7150", "#c0392b", "#1f1e1c"];
+      const ch = (h * 0.8) / chips.length;
+      ctx.font = `${ch * 0.32}px ${marker}`;
+      ctx.textAlign = "left";
+      chips.forEach((c, i) => {
+        const y = -h * 0.4 + i * ch;
+        ctx.fillStyle = c;
+        ctx.fillRect(-w * 0.38, y + ch * 0.12, w * 0.36, ch * 0.76);
+        ctx.fillStyle = "rgba(40,38,36,0.7)";
+        ctx.fillText(c.slice(1).toUpperCase(), w * 0.06, y + ch * 0.5);
+      });
+      break;
+    }
+    case "notes": {
+      // a cluster of sticky notes with to-dos
+      const notes: [x: number, y: number, a: number, color: string, lines: string[]][] = [
+        [-0.2, -0.2, -0.06, "#f7e27a", ["finish", "wall mural"]],
+        [0.2, -0.12, 0.05, "#f4a7b9", ["reel cut", "v3 ✓"]],
+        [-0.12, 0.22, 0.04, "#a8d8c8", ["call", "nanna ♥"]],
+        [0.22, 0.26, -0.07, "#f7e27a", ["buy 2B", "pencils"]],
+      ];
+      const n = w * 0.42;
+      ctx.font = `${n * 0.17}px ${marker}`;
+      for (const [x, y, a, color, lines] of notes) {
+        ctx.save();
+        ctx.translate(x * w, y * h);
+        ctx.rotate(a);
+        ctx.shadowColor = "rgba(50,38,26,0.25)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = color;
+        ctx.fillRect(-n / 2, -n / 2, n, n);
+        ctx.shadowColor = "transparent";
+        ctx.fillStyle = "rgba(34,33,31,0.85)";
+        lines.forEach((l, i) => ctx.fillText(l, 0, -n * 0.12 + i * n * 0.26));
+        ctx.restore();
       }
       break;
     }

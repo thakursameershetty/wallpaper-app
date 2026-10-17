@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, PerformanceMonitor } from "@react-three/drei";
+import { Environment, PerformanceMonitor, useProgress } from "@react-three/drei";
 import { Bloom, EffectComposer, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { DESK, SUN, WALL_Z, layoutFor, type DeskLayout } from "./layout";
@@ -17,9 +17,16 @@ type Props = {
   /** Element whose pointer moves drive the lamp and camera sway (the hero section). */
   eventSource: React.RefObject<HTMLElement | null>;
   onReady?: () => void;
+  /** Share of the scene's files (model, textures, HDR) downloaded so far, 0–100. */
+  onProgress?: (percent: number) => void;
 };
 
-export default function DeskScene({ running, eventSource, onReady }: Props) {
+export default function DeskScene({ running, eventSource, onReady, onProgress }: Props) {
+  const loaded = useProgress((s) => s.progress);
+  useEffect(() => {
+    onProgress?.(loaded);
+  }, [loaded, onProgress]);
+
   // nothing renders until the shaders are compiled, so the first frame doesn't stall the page
   const [compiled, setCompiled] = useState(false);
   // drop to 1× pixels if the machine can't keep up
@@ -201,7 +208,8 @@ function Lights() {
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0003}
         shadow-normalBias={0.04}
-        shadow-radius={8}
+        // three's PCF blurs with only 5 noisy taps, so a wide radius smears into blotches on the wall
+        shadow-radius={3}
         shadow-camera-left={-13}
         shadow-camera-right={13}
         shadow-camera-top={13}
@@ -218,11 +226,11 @@ function Effects() {
   const small = useThree((s) => s.size.width < 768);
   return (
     <EffectComposer multisampling={0}>
-      <N8AO aoRadius={0.45} distanceFalloff={0.6} intensity={2.4} quality={small ? "low" : "medium"} halfRes={small} />
+      <N8AO aoRadius={0.45} distanceFalloff={0.6} intensity={2.4} quality={small ? "low" : "high"} halfRes={small} />
       <Bloom mipmapBlur luminanceThreshold={0.92} luminanceSmoothing={0.2} intensity={0.35} />
       <ToneMapping mode={ToneMappingMode.NEUTRAL} />
       <SMAA />
-      <Vignette offset={0.3} darkness={0.5} />
+      <Vignette offset={0.4} darkness={0.3} />
       <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.2} />
     </EffectComposer>
   );

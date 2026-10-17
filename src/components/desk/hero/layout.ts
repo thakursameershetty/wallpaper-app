@@ -2,12 +2,12 @@
  * Abishek's real desk: a white-topped study table pushed against a wall that's
  * papered floor-to-eye-level with his own sketches.
  *
- * Units: 1 = 10 cm, so the desk is 130 × 75 cm and the A2 cutting mat is 6 × 4.5.
+ * Units: 1 = 10 cm, so the desk is 160 × 75 cm and the A2 cutting mat is 6 × 4.5.
  * Axes: x → right, z → towards the viewer, y → up off the desk.
  * `rot` is the yaw (degrees, clockwise seen from above) of an object on the desk.
  */
 
-export const DESK = { w: 13, d: 7.5 };
+export const DESK = { w: 16, d: 7.5 };
 /** The wall the desk is pushed against. */
 export const WALL_Z = -DESK.d / 2;
 /** Where the window's daylight comes from (the shadow-casting light), relative to the desk centre. */
@@ -59,22 +59,22 @@ export const PROPS: Record<PropId, Placement> = {
   laptop: { pos: [0, -1.95] },
   coneLamp: { pos: [-2.55, -2.95], rot: -18 },
   ledLamp: { pos: [2.55, -2.95], rot: 14 },
-  boomArm: { pos: [-6.1, -3.2] },
+  boomArm: { pos: [-7.3, -3.2] },
 
-  markers: { pos: [-5.0, -2.2] },
-  brushCup: { pos: [-3.7, -1.55] },
-  tape: { pos: [-5.35, 0.25], rot: -20 },
-  bobblehead: { pos: [-4.15, 0.5] },
-  padmini: { pos: [-4.85, 1.55], rot: -10 },
-  gtr: { pos: [-4.4, 2.6], rot: -4 },
-  jeep: { pos: [-3.65, 2.05], rot: 6 },
-  roadster: { pos: [-5.25, 2.75], rot: -16 },
-  remote: { pos: [-5.7, 3.3], rot: 8 },
+  markers: { pos: [-6.2, -2.2] },
+  brushCup: { pos: [-4.4, -1.55] },
+  tape: { pos: [-6.6, 0.25], rot: -20 },
+  bobblehead: { pos: [-5.1, 0.5] },
+  padmini: { pos: [-6.0, 1.55], rot: -10 },
+  gtr: { pos: [-5.5, 2.6], rot: -4 },
+  jeep: { pos: [-4.6, 2.05], rot: 6 },
+  roadster: { pos: [-6.5, 2.75], rot: -16 },
+  remote: { pos: [-7.0, 3.3], rot: 8 },
 
-  tablet: { pos: [4.7, 0.15], rot: -5 },
-  chai: { pos: [5.6, 2.75] },
-  tubes: { pos: [4.1, 1.85] },
-  jars: { pos: [3.45, -1.75] },
+  tablet: { pos: [5.7, 0.15], rot: -5 },
+  chai: { pos: [6.8, 2.75] },
+  tubes: { pos: [4.6, 1.85] },
+  jars: { pos: [3.9, -1.75] },
 };
 
 export type DeskLayout = {

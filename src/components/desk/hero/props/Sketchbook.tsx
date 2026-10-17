@@ -25,7 +25,7 @@ const PAGE_W = W - 0.02;
 export const BOOK_W = W;
 export const BOOK_D = D;
 
-const KRAFT = "#c4a073";
+const KRAFT = "#cfae82";
 
 type Props = {
   /** How far open, 0–1 (eased by the caller). Omit for a book that stays shut. */
@@ -105,32 +105,24 @@ export function Sketchbook({
   const cover = useMemo(() => {
     const logoImg = logo.image as HTMLImageElement;
     const charImg = character.image as HTMLImageElement;
-    return cachedTexture("sketchbook-cover", 1100, 1500, (ctx, w, h) => {
-      // kraft board: base, mottling, fibres
+    return cachedTexture("sketchbook-cover:v2", 1100, 1500, (ctx, w, h) => {
+      // kraft board: clean, with just a little fibre showing
       ctx.fillStyle = KRAFT;
       ctx.fillRect(0, 0, w, h);
       const r = rng(11);
-      for (let i = 0; i < 60; i++) {
-        const g = ctx.createRadialGradient(r() * w, r() * h, 0, r() * w, r() * h, 80 + r() * 220);
-        const dark = r() < 0.5;
-        g.addColorStop(0, dark ? "rgba(120,84,44,0.07)" : "rgba(236,214,170,0.08)");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-      }
-      for (let i = 0; i < 2600; i++) {
+      for (let i = 0; i < 900; i++) {
         const x = r() * w;
         const y = r() * h;
         const a = r() * Math.PI;
-        const len = 4 + r() * 16;
-        ctx.strokeStyle = r() < 0.5 ? "rgba(98,66,32,0.16)" : "rgba(240,222,186,0.18)";
-        ctx.lineWidth = 0.7 + r() * 0.8;
+        const len = 4 + r() * 12;
+        ctx.strokeStyle = r() < 0.4 ? "rgba(98,66,32,0.06)" : "rgba(240,222,186,0.12)";
+        ctx.lineWidth = 0.7 + r() * 0.6;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
         ctx.stroke();
       }
-      grain(ctx, w, h, 16, 12);
+      grain(ctx, w, h, 6, 12);
 
       // printed wordmark — multiply so the ink sits *in* the board
       ctx.globalCompositeOperation = "multiply";
@@ -155,38 +147,23 @@ export function Sketchbook({
       ctx.fillText("sketchbook no. 7", 0, 0);
       ctx.restore();
 
-      // handled edges: darker, a bit scuffed
-      const edge = ctx.createLinearGradient(0, 0, w, 0);
-      edge.addColorStop(0, "rgba(70,46,22,0.22)");
-      edge.addColorStop(0.04, "rgba(70,46,22,0)");
-      edge.addColorStop(0.96, "rgba(70,46,22,0)");
-      edge.addColorStop(1, "rgba(70,46,22,0.25)");
-      ctx.fillStyle = edge;
-      ctx.fillRect(0, 0, w, h);
-      const edgeY = ctx.createLinearGradient(0, 0, 0, h);
-      edgeY.addColorStop(0, "rgba(70,46,22,0.2)");
-      edgeY.addColorStop(0.03, "rgba(70,46,22,0)");
-      edgeY.addColorStop(0.97, "rgba(70,46,22,0)");
-      edgeY.addColorStop(1, "rgba(70,46,22,0.22)");
-      ctx.fillStyle = edgeY;
-      ctx.fillRect(0, 0, w, h);
     });
   }, [logo, character]);
 
   const pages = useMemo(
     () =>
-      cachedTexture("sketchbook-pages", 64, 256, (ctx, w, h) => {
-        ctx.fillStyle = "#efe6d2";
+      cachedTexture("sketchbook-pages:v2", 64, 256, (ctx, w, h) => {
+        ctx.fillStyle = "#f6f2e8";
         ctx.fillRect(0, 0, w, h);
         for (let y = 0; y < h; y += 2) {
-          ctx.fillStyle = `rgba(150,130,100,${0.12 + ((y * 37) % 11) / 60})`;
+          ctx.fillStyle = `rgba(150,130,100,${0.06 + ((y * 37) % 11) / 120})`;
           ctx.fillRect(0, y, w, 1);
         }
       }),
     [],
   );
 
-  const blank = useMemo(() => cachedTexture("sketchbook-blank-page", 512, 700, drawBlankPage), []);
+  const blank = useMemo(() => cachedTexture("sketchbook-blank-page:v2", 512, 700, drawBlankPage), []);
   const leftGeo = useMemo(() => pageGeometry("max"), []);
   const rightGeo = useMemo(() => pageGeometry("min"), []);
   useDispose(leftGeo, rightGeo);
@@ -351,7 +328,7 @@ export function Sketchbook({
             </RoundedBox>
             <mesh rotation-x={-Math.PI / 2} position-y={MID + 0.0006}>
               <planeGeometry args={[W - 0.012, D - 0.012]} />
-              <meshStandardMaterial map={cover} bumpMap={cover} bumpScale={1.2} roughness={0.88} />
+              <meshStandardMaterial map={cover} bumpMap={cover} bumpScale={0.25} roughness={0.8} />
             </mesh>
           </group>
           <RoundedBox args={[0.13, MID - 0.006, D + 0.004]} radius={0.04} smoothness={4} position={[0.05, MID - (MID - 0.006) / 2, 0]}>
