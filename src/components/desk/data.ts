@@ -44,14 +44,36 @@ export const WORK: WorkCategory[] = [
   { title: "Acrylic & Pen", images: ["/gallery-4.jpeg"] },
 ];
 
+/** Intrinsic sizes of the originals, so every frame has its shape before anything loads. */
+export const IMAGE_SIZES: Record<string, [number, number]> = {
+  "/gallery-1.jpeg": [1440, 1920],
+  "/gallery-2.jpeg": [1440, 1799],
+  "/gallery-3.jpg": [540, 960],
+  "/gallery-4.jpeg": [1440, 1049],
+  "/gallery-5.jpeg": [2906, 3733],
+  "/gallery-6.jpeg": [1094, 1440],
+  "/pencilsketches/pencilsketches1.jpg": [540, 960],
+  "/pencilsketches/pencilsketches2.jpeg": [1080, 1440],
+  "/pencilsketches/pencilsketches3.webp": [1439, 936],
+  "/pencilsketches/pencilsketches4.jpeg": [1440, 1798],
+  "/pencilsketches/pencilsketches5.jpeg": [961, 1201],
+  "/digitalarts/digitalarts1.webp": [1439, 1085],
+  "/digitalarts/digitalarts2.webp": [1440, 1800],
+  "/digitalarts/digitalarts3.webp": [1440, 1800],
+  "/digitalarts/digitalarts4.jpg": [1440, 1920],
+  "/digitalarts/digitalarts5.jpeg": [1011, 1600],
+};
+
 export const WALL_ART_VIDEOS = [
   {
-    src: "/wall-art-1.mp4",
+    src: "/media/wall-art-1.mp4",
+    poster: "/media/wall-art-1.jpg",
     label: "The Paradise",
     instagramUrl: "https://www.instagram.com/reel/DVhubNQkdgM/?utm_source=ig_web_copy_link&igsi=MzRlODBiNWFlZA==",
   },
   {
-    src: "/wall-art-2.mp4",
+    src: "/media/wall-art-2.mp4",
+    poster: "/media/wall-art-2.jpg",
     label: "PEDDI",
     instagramUrl: "https://www.instagram.com/reel/DZJnRCfRHuY/?utm_source=ig_web_copy_link&igsi=MzRlODBiNWFlZA==",
   },

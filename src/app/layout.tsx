@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Permanent_Marker, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Kalam, JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { FolderProvider } from "@/context/FolderContext";
@@ -8,10 +8,11 @@ import { SearchProvider } from "@/context/SearchContext";
 import { AboutProvider } from "@/context/AboutContext";
 import { NavigationLayout } from "@/components/NavigationLayout";
 
-const permanentMarker = Permanent_Marker({
-  weight: "400",
+// hand lettering: notes, labels, captions
+const kalam = Kalam({
+  weight: ["300", "400", "700"],
   subsets: ["latin"],
-  variable: "--font-permanent-marker",
+  variable: "--font-hand",
 });
 
 const generalSans = localFont({
@@ -28,13 +29,6 @@ const generalSans = localFont({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
-});
-
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-  variable: "--font-instrument-serif",
 });
 
 const SITE_URL = "https://abishek-pencil.vercel.app";
@@ -103,7 +97,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`h-full antialiased font-sans ${permanentMarker.variable} ${generalSans.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      className={`h-full antialiased font-sans ${kalam.variable} ${generalSans.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />

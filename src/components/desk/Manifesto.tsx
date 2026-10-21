@@ -119,7 +119,7 @@ function Word({
         style={{ opacity }}
         className={
           gradient
-            ? `${gradient} -ml-[0.15em] bg-clip-text py-[0.1em] pl-[0.15em] pr-[0.08em] text-transparent [font-family:var(--font-accent)] font-normal italic`
+            ? `${gradient} -ml-[0.15em] bg-clip-text py-[0.1em] pl-[0.15em] pr-[0.08em] text-transparent [font-family:var(--font-accent)] font-normal`
             : undefined
         }
       >

@@ -140,7 +140,7 @@ export function Sketchbook({
 
       // handwritten volume number, bottom-right
       ctx.fillStyle = "rgba(38,36,34,0.82)";
-      ctx.font = `${w * 0.05}px ${cssFont("--font-permanent-marker", "cursive")}`;
+      ctx.font = `${w * 0.05}px ${cssFont("--font-hand", "cursive")}`;
       ctx.save();
       ctx.translate(w * 0.62, h * 0.93);
       ctx.rotate(-0.05);

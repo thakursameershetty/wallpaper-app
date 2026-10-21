@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { DeskNav } from "@/components/desk/DeskNav";
-import { WorkBoard } from "@/components/desk/WorkBoard";
-import { Contact } from "@/components/desk/Contact";
+import { SiteNav } from "@/components/studio/SiteNav";
+import { Work } from "@/components/studio/Work";
+import { Contact } from "@/components/studio/Contact";
 import { WORK, slugOf } from "@/components/desk/data";
 
 type Params = { medium?: string[] };
@@ -36,19 +36,16 @@ export default async function DeskPage({ params }: { params: Promise<Params> }) 
   if (medium === undefined) notFound();
 
   return (
-    <div className="desk">
-      <DeskNav />
-      <main>
-        <WorkBoard initialFilter={medium ?? undefined} syncUrl>
+    <div className="desk studio">
+      <SiteNav />
+      <main className="pt-16">
+        <Work initialFilter={medium ?? undefined} syncUrl>
           <div className="mt-12">
-            <Link
-              href="/#about"
-              className="btn-glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-transform hover:-translate-x-0.5"
-            >
-              <ArrowLeft size={16} /> Back to the sketchbook
+            <Link href="/" className="btn-ghost inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium">
+              <ArrowLeft size={16} /> Back home
             </Link>
           </div>
-        </WorkBoard>
+        </Work>
         <Contact />
       </main>
     </div>

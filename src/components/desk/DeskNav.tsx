@@ -10,9 +10,9 @@ import { NAV_LINKS } from "./data";
 
 export function DeskNav() {
   const [open, setOpen] = useState(false);
-  // off the home page the section links lead back to it ("/#about"), not to a section that is not here
-  const home = usePathname() === "/";
-  const to = (href: string) => (home || !href.startsWith("#") ? href : `/${href}`);
+  // this nav now only serves the classic desk (/classic); elsewhere its section links lead back there
+  const home = usePathname() === "/classic";
+  const to = (href: string) => (home || !href.startsWith("#") ? href : `/classic${href}`);
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 30 });
 

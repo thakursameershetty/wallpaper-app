@@ -86,14 +86,14 @@ let fontsPromise: Promise<unknown> | null = null;
 /** Resolves once the fonts canvas textures draw with have loaded (for React's `use`). */
 export function fontsReady() {
   fontsPromise ??= Promise.all([
-    document.fonts.load(`40px ${cssFont("--font-permanent-marker", "cursive")}`),
+    document.fonts.load(`40px ${cssFont("--font-hand", "cursive")}`),
     document.fonts.load(`500 40px ${cssFont("--font-general-sans", "sans-serif")}`),
     document.fonts.load(`40px ${cssFont("--font-jetbrains-mono", "monospace")}`),
     // the open sketchbook's printed page
     document.fonts.load(`400 40px ${cssFont("--font-general-sans", "sans-serif")}`),
     document.fonts.load(`600 40px ${cssFont("--font-general-sans", "sans-serif")}`),
     document.fonts.load(`700 40px ${cssFont("--font-jetbrains-mono", "monospace")}`),
-    document.fonts.load(`italic 40px ${cssFont("--font-instrument-serif", "serif")}`),
+    document.fonts.load(`400 40px ${cssFont("--font-hand", "cursive")}`),
   ]).catch(() => undefined);
   return fontsPromise;
 }

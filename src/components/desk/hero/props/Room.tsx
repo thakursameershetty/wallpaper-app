@@ -284,7 +284,7 @@ export function ArtWall() {
 /* -------------------- hand-made posters, drawn straight onto the paper -------------------- */
 
 function drawPoster(ctx: CanvasRenderingContext2D, poster: Poster, w: number, h: number) {
-  const marker = cssFont("--font-permanent-marker", "cursive");
+  const marker = cssFont("--font-hand", "cursive");
   const sans = cssFont("--font-general-sans", "sans-serif");
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";

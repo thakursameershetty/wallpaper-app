@@ -170,8 +170,8 @@
   --color-sage: #8a9682;
   --color-dusk: #6f7f95;
   --font-sans-desk: var(--font-general-sans), system-ui, sans-serif;
-  --font-marker: var(--font-permanent-marker), "Comic Sans MS", cursive;
-  --font-accent: var(--font-instrument-serif), Georgia, serif;
+  --font-marker: var(--font-hand), "Comic Sans MS", cursive;
+  --font-accent: var(--font-hand), "Comic Sans MS", cursive;
   --font-ruler: var(--font-jetbrains-mono), ui-monospace, monospace;
   --animate-spin-record: spin 2.4s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
@@ -194,7 +194,7 @@
   color: var(--color-ink);
 }
 
-/* Big headings in General Sans; wrap one word in <em> for the serif accent */
+/* Big headings in General Sans; wrap one word in <em> for the handwritten accent */
 .display {
   font-family: var(--font-sans-desk);
   font-weight: 600;
@@ -204,7 +204,7 @@
 
 .display em {
   font-family: var(--font-accent);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   letter-spacing: -0.015em;
 }
@@ -336,4 +336,229 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Studio — the light homepage                                         */
+/* Flat paper, hairline rules and the work itself. No grain, no blur,  */
+/* no layered shadows; motion is CSS only and stays under ~300ms.      */
+/* ------------------------------------------------------------------ */
+
+.studio {
+  --rule: rgb(31 30 28 / 0.12);
+}
+
+.btn-solid {
+  color: var(--color-paper);
+  background: var(--color-ink);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-solid:hover {
+  background: #000;
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px rgb(31 30 28 / 0.2);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background: rgb(31 30 28 / 0.04);
+  box-shadow: inset 0 0 0 1px rgb(31 30 28 / 0.45);
+}
+
+/* Underline that reads like a single pencil stroke (path needs pathLength="1") */
+.stroke-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.fade-in {
+  animation: fade-in 0.25s ease both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stroke-draw path {
+    animation: draw 0.8s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both;
+  }
+
+  /* Where the browser can tie animation to scroll, sections ease in as they arrive — no JS */
+  @supports (animation-timeline: view()) {
+    /* .on-load strokes (the hero) draw on a timer instead: they start out already in view */
+    .stroke-draw:not(.on-load) path {
+      animation: draw linear both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 35%;
+    }
+
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Graphite — the WebGL homepage                                       */
+/* ------------------------------------------------------------------ */
+
+.graphite {
+  background: #f3f0e9;
+}
+
+/* Once WebGL is running, the canvas draws each artwork; its <img> stays only for SEO and fallbacks */
+.gl .art-fallback {
+  opacity: 0;
+}
+
+.marquee {
+  animation: marquee 38s linear infinite;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(calc(-50% - 1.5rem));
+  }
+}
+
+@keyframes scroll-hint {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  51% {
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
+
+/* the pencil replaces the system cursor on pointer devices (set by PencilCursor) */
+.pencil-cursor,
+.pencil-cursor * {
+  cursor: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Scrapbook — the illustrated homepage                                */
+/* A desk on a cutting mat, a torn-out About sheet, a dark table of contents. */
+/* ------------------------------------------------------------------ */
+
+.scrapbook {
+  background: #0e0e0e;
+}
+
+/* green self-healing cutting mat: fine grid, heavier every fifth line, one 45° guide */
+.mat {
+  background-color: #3a8a4f;
+  background-image:
+    linear-gradient(135deg, transparent calc(50% - 1px), rgb(255 255 255 / 0.16) 50%, transparent calc(50% + 1px)),
+    linear-gradient(rgb(255 255 255 / 0.24) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.24) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.1) 1px, transparent 1px);
+  background-size: 100% 100%, 150px 150px, 150px 150px, 30px 30px, 30px 30px;
+  background-position: 0 0, -1px -1px, -1px -1px, -1px -1px, -1px -1px;
+}
+
+/* lamp light falling diagonally across the desk, the corners left in shadow */
+.lamp {
+  background:
+    linear-gradient(118deg, transparent 26%, rgb(255 246 210 / 0.2) 40%, rgb(255 246 210 / 0.2) 60%, transparent 74%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgb(0 0 0 / 0.28) 100%);
+  mix-blend-mode: soft-light;
+}
+
+/* die-cut sticker: a white outline that follows the artwork's shape, then a soft shadow */
+.sticker {
+  filter: drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff)
+    drop-shadow(0 8px 10px rgb(0 0 0 / 0.3));
+}
+
+/* sticky note: a lift at the bottom right corner */
+.note {
+  box-shadow: 0 10px 20px rgb(0 0 0 / 0.28);
+  background-image: linear-gradient(315deg, rgb(0 0 0 / 0.12), transparent 18%);
+}
+
+.paper {
+  background-image: radial-gradient(rgb(0 0 0 / 0.035) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* washi tape: faint stripes through the colour */
+.tape {
+  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.18) 0 6px, transparent 6px 12px);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+}
+
+/* the About sheet: a fresh page, a shade lighter than the hero's paper, with a faint tooth */
+.sheet {
+  background-color: #faf8f3;
+  background-image: radial-gradient(rgb(0 0 0 / 0.03) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* comic-print halftone dots laid over the chapter covers */
+.halftone {
+  background-image: radial-gradient(rgb(0 0 0 / 0.18) 0.9px, transparent 1.3px);
+  background-size: 4px 4px;
+  mix-blend-mode: multiply;
+}
+
+/* quiet text links on paper: grey until hovered */
+.link {
+  color: #555;
+  text-underline-offset: 4px;
+  transition: color 0.2s ease;
+}
+
+.link:hover {
+  color: #161616;
+  text-decoration: underline;
+}
+
+/*
+ * SplitText clips each hero letter to its own box. With the display face's tight tracking a glyph
+ * is wider than that box, so widen the clip sideways (and give the width back with a negative
+ * margin): only the vertical clip, which hides the letters before they rise, is wanted.
+ */
+.hero-char-mask {
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
 }

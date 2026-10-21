@@ -17,9 +17,9 @@ const OCHRE = "#d4a24c";
 
 const fonts = () => ({
   sans: cssFont("--font-general-sans", "sans-serif"),
-  serif: cssFont("--font-instrument-serif", "serif"),
+  serif: cssFont("--font-hand", "cursive"),
   mono: cssFont("--font-jetbrains-mono", "monospace"),
-  marker: cssFont("--font-permanent-marker", "cursive"),
+  marker: cssFont("--font-hand", "cursive"),
 });
 
 /** Ruled notebook paper: clean off-white with faint tooth, shading into the gutter at `spine`. */
@@ -248,7 +248,7 @@ export function drawRightPage(ctx: CanvasRenderingContext2D, w: number, h: numbe
     if (draw) ctx.fillText(lead, left, y);
     const lw = ctx.measureText(lead).width;
     setSpacing(ctx, -2 * s);
-    ctx.font = `italic 400 ${138 * s}px ${f.serif}`;
+    ctx.font = `400 ${138 * s}px ${f.serif}`;
     if (draw) ctx.fillText("create.", left + lw, y);
     const cw = ctx.measureText("create.").width;
     setSpacing(ctx, 0);
@@ -351,7 +351,7 @@ export function drawIndexPage(ctx: CanvasRenderingContext2D, w: number, h: numbe
   ctx.fillText("Every tool has", left, y);
   y += 140;
   setSpacing(ctx, -2);
-  ctx.font = `italic 400 128px ${f.serif}`;
+  ctx.font = `400 128px ${f.serif}`;
   ctx.fillText("a job.", left, y);
   const jw = ctx.measureText("a job.").width;
   setSpacing(ctx, 0);
@@ -500,7 +500,7 @@ export function drawSketchLeft(ctx: CanvasRenderingContext2D, w: number, h: numb
   ctx.fillText("Pencil", left, y);
   y += 150;
   setSpacing(ctx, -2);
-  ctx.font = `italic 400 142px ${f.serif}`;
+  ctx.font = `400 142px ${f.serif}`;
   ctx.fillText("Sketches", left, y);
   setSpacing(ctx, 0);
   // (its ochre underline is not printed: the pencil draws it, see hero/underline)
@@ -613,12 +613,12 @@ const TITLE_LEFT = 0.12; // × page width
 const TITLE_BASELINE = (h: number) => h * 0.1 + 160 + 150;
 
 const wordWidths = new Map<string, number>();
-/** Width of a title's second word (set in the italic serif), measured once the fonts are in. */
+/** Width of a title's second word (set in the handwritten accent), measured once the fonts are in. */
 function measureWord(word: string) {
   let width = wordWidths.get(word);
   if (!width) {
     const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = `italic 400 142px ${fonts().serif}`;
+    ctx.font = `400 142px ${fonts().serif}`;
     setSpacing(ctx, -2);
     width = ctx.measureText(word).width;
     wordWidths.set(word, width);
@@ -825,7 +825,7 @@ export function drawChapterLeft(ctx: CanvasRenderingContext2D, w: number, h: num
   ctx.fillText(c.title[0], left, y);
   y += 150;
   setSpacing(ctx, -2);
-  ctx.font = `italic 400 142px ${f.serif}`;
+  ctx.font = `400 142px ${f.serif}`;
   ctx.fillText(c.title[1], left, y);
   setSpacing(ctx, 0);
   // (its ochre underline is not printed: the tool for this chapter draws it)

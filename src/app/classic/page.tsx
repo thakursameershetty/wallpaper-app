@@ -6,8 +6,10 @@ import { WhatIDo } from "@/components/desk/WhatIDo";
 import { WallArt } from "@/components/desk/WallArt";
 import { Showreel } from "@/components/desk/Showreel";
 import { Contact } from "@/components/desk/Contact";
-//test
-export default function Home() {
+
+export const metadata = { title: "Classic desk", robots: { index: false } };
+
+export default function ClassicHome() {
   return (
     <div className="desk">
       <DeskNav />
