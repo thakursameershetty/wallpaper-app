@@ -138,12 +138,44 @@ function Pinboard({ chapter: c, n, onOpen }: LayoutProps) {
 
 function Feature({ chapter: c, n, onOpen }: LayoutProps) {
   const [active, setActive] = useState(0);
+  const thumbs = useRef<HTMLOListElement>(null);
+  const moved = useRef(false);
+  const total = c.pieces.length;
   const p = c.pieces[active];
+  const step = (d: number) => setActive((i) => (i + d + total) % total);
+
+  // keep the chosen thumbnail in sight within its own scrolling strip, without moving the page
+  // (the strip is `relative`, so each thumbnail's offsets are measured from it)
+  useEffect(() => {
+    const strip = thumbs.current;
+    const el = strip?.children[active] as HTMLElement | undefined;
+    // on first load the strip stays at its start
+    if (!moved.current) {
+      moved.current = true;
+      return;
+    }
+    if (!strip || !el) return;
+    const sideways = strip.scrollWidth > strip.clientWidth + 1;
+    strip.scrollTo({
+      left: sideways ? el.offsetLeft - strip.clientWidth / 2 + el.offsetWidth / 2 : 0,
+      top: sideways ? 0 : el.offsetTop - strip.clientHeight / 2 + el.offsetHeight / 2,
+      behavior: "smooth",
+    });
+  }, [active]);
+
   return (
     <>
       <Head chapter={c} n={n} />
       <div className="mt-14 grid gap-6 md:mt-20 md:grid-cols-12 md:gap-10">
-        <div className="relative h-[60svh] md:col-span-8 md:h-[78vh]">
+        <div
+          className="relative h-[60svh] outline-none md:col-span-8 md:h-[78vh]"
+          tabIndex={0}
+          aria-label={`${c.title}: use the arrow keys to move between pieces`}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") step(1);
+            if (e.key === "ArrowLeft") step(-1);
+          }}
+        >
           <AnimatePresence initial={false}>
             <motion.div
               key={p.src}
@@ -157,9 +189,26 @@ function Feature({ chapter: c, n, onOpen }: LayoutProps) {
               <button type="button" onClick={() => onOpen(active)} data-cursor="view" aria-label={`View ${c.title}, piece ${active + 1}, full size`} className="absolute inset-0" />
             </motion.div>
           </AnimatePresence>
+
+          <div className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 translate-y-full items-center gap-4 md:-bottom-4">
+            <button type="button" onClick={() => step(-1)} aria-label="Previous piece" className="grid size-10 place-items-center rounded-full border border-white/20 text-lg transition-colors hover:border-[var(--accent)] hover:bg-white/5">
+              ←
+            </button>
+            <span className="min-w-[4.5rem] text-center font-marker text-base font-bold tabular-nums">
+              {String(active + 1).padStart(2, "0")} <span className="text-white/40">/ {String(total).padStart(2, "0")}</span>
+            </span>
+            <button type="button" onClick={() => step(1)} aria-label="Next piece" className="grid size-10 place-items-center rounded-full border border-white/20 text-lg transition-colors hover:border-[var(--accent)] hover:bg-white/5">
+              →
+            </button>
+          </div>
         </div>
 
-        <ol className="-mx-5 flex gap-3 overflow-x-auto px-5 md:col-span-4 md:mx-0 md:grid md:grid-cols-2 md:content-start md:gap-4 md:overflow-visible md:px-0">
+        {/* a sideways strip on phones; a grid that scrolls within the viewer's height on wider screens */}
+        <ol
+          ref={thumbs}
+          data-lenis-prevent
+          className="relative -mx-5 mt-16 flex gap-3 overflow-x-auto px-5 py-1 md:col-span-4 md:mx-0 md:mt-0 md:grid md:h-[78vh] md:grid-cols-4 md:content-start md:gap-3 md:overflow-y-auto md:overflow-x-hidden md:p-1.5 md:pr-3"
+        >
           {c.pieces.map((q, i) => (
             <li key={q.src} className="shrink-0">
               <button
@@ -167,14 +216,11 @@ function Feature({ chapter: c, n, onOpen }: LayoutProps) {
                 onClick={() => setActive(i)}
                 aria-pressed={i === active}
                 aria-label={`Show piece ${i + 1}`}
-                className={`relative block aspect-square w-20 overflow-hidden rounded-md transition-[opacity,box-shadow] duration-300 md:w-full ${
-                  i === active ? "opacity-100 ring-2 ring-[var(--accent)] ring-offset-4 ring-offset-[#0e0e0e]" : "opacity-45 hover:opacity-90"
+                className={`relative block aspect-square w-16 overflow-hidden rounded-md bg-white/5 transition-[opacity,box-shadow] duration-300 md:w-full ${
+                  i === active ? "opacity-100 ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[#0e0e0e]" : "opacity-45 hover:opacity-90"
                 }`}
               >
-                <Image src={q.src} alt="" fill sizes="(max-width: 768px) 80px, 14vw" className="object-cover" />
-                <span className="absolute bottom-1.5 left-2 font-marker text-sm font-bold text-white drop-shadow-[0_1px_2px_rgb(0_0_0/0.8)]">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <Image src={q.src} alt="" fill sizes="(max-width: 768px) 64px, 8vw" className="object-cover" />
               </button>
             </li>
           ))}

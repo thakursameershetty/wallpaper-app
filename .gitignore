@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw exports (phone PNGs, 4K video): web-sized copies live in public/
+/abishek/

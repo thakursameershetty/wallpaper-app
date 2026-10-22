@@ -161,7 +161,7 @@ export function ReelCarousel({ videos }: { videos: Video[] }) {
                         preload="metadata"
                         aria-label={v.label}
                         onEnded={() => go(1)}
-                        className="size-full object-cover"
+                        className="size-full bg-black object-contain"
                       />
                       {!still && (
                         <button
@@ -175,6 +175,7 @@ export function ReelCarousel({ videos }: { videos: Video[] }) {
                         </button>
                       )}
                       <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2.5 py-0.5 font-marker text-xs font-bold md:right-4 md:top-4 md:px-3 md:py-1 md:text-sm text-white backdrop-blur-sm">
+                        {v.kind && <span className="font-sans font-medium text-white/60">{v.kind} · </span>}
                         {v.label}
                       </span>
                     </>

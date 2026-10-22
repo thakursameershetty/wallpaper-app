@@ -4,7 +4,9 @@ import type { Piece } from "@/components/graphite/Lightbox";
 /** How a chapter's own section lays out its work. */
 export type Layout = "pinboard" | "feature" | "spread" | "film" | "walls";
 
-export type Video = { src: string; poster: string; label: string; href?: string };
+export type Video = { src: string; poster: string; label: string; href?: string; /** "2D", "3D", "Motion graphics"… */ kind?: string };
+
+const film = (slug: string, label: string, kind: string): Video => ({ src: `/media/motion/${slug}.mp4`, poster: `/media/motion/${slug}.jpg`, label, kind });
 
 export type Chapter = {
   title: string;
@@ -48,7 +50,17 @@ export const CHAPTERS: Chapter[] = [
     accent: "#7aa7ff",
     layout: "film",
     tone: "dark",
-    videos: [{ src: "/media/showreel.mp4", poster: "/media/showreel.jpg", label: "Showreel" }],
+    videos: [
+      { src: "/media/showreel.mp4", poster: "/media/showreel.jpg", label: "Showreel", kind: "3D" },
+      film("3d-jadal-zamaana-shuru", "Jadal Zamaana Shuru", "3D"),
+      film("3d-golden-title", "Golden title sequence", "3D"),
+      film("3d-pencil-logo", "Pencil logo reveal", "3D"),
+      film("2d-night-city-title", "Night city title", "2D"),
+      film("2d-scale-up-mascot", "Scale Up mascot", "2D"),
+      film("mg-careers-app-3d", "Careers app launch", "Motion graphics"),
+      film("mg-careers-app-ui", "Careers app walkthrough", "Motion graphics"),
+      film("mg-crypto-promo", "Crypto wallet promo", "Motion graphics"),
+    ],
   }),
   chapter({
     title: "Wall Art",
